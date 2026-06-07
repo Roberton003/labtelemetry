@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: local_observability_jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      # Jaeger UI (Interface Web para visualizar os traces)
+      - "16686:16686"
+      # OpenTelemetry gRPC Receiver
+      - "4317:4317"
+      # OpenTelemetry HTTP Receiver
+      - "4318:4318"
+      # Jaeger Compact Thrift Receiver (legacy)
+      - "6831:6831/udp"
+    restart: unless-stopped

@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Course resources & VM (too large)
+automação40/
+*.pdf
+
+# IDEs & Tools
+.vscode/
+.idea/
+.gemini/
+.DS_Store
+
+# --- SECURITY & COMPLIANCE RULES (NEVER EXPOSE PLANNING/SENSITIVE FILES) ---
+# Ignore all markdown planning, career strategies, and conversation logs in the root directory
+/*.md
+
+# EXCEPT for the repository README.md which is required
+!/README.md
