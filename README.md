@@ -4,6 +4,8 @@ O **LabTelemetry** é uma plataforma que integra a camada física de automação
 
 O projeto simula e monitora uma Estação de Tratamento de Efluentes/Água Química, coletando séries temporais de sensores físicos, aplicando validações de qualidade e exibindo indicadores gerenciais e alarmes ativos.
 
+Para entender de onde o projeto surgiu e quais diretivas guiaram os primeiros rascunhos, veja [docs/origem_do_projeto.md](docs/origem_do_projeto.md).
+
 ---
 
 ## 🏗️ Arquitetura do Sistema
