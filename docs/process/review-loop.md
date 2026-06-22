@@ -1,6 +1,6 @@
 # Fluxo De Review Do LabTelemetry
 
-Este projeto usa um ciclo curto de implementacao e revisao inspirado no `claude-review-loop`.
+Este projeto usa um ciclo curto de implementacao e revisao baseado no principio `review-loop`.
 
 ## Objetivo
 
@@ -50,4 +50,3 @@ Ao final de cada ciclo, deve existir:
 - um diff revisado;
 - uma verificacao executada;
 - uma PR pronta para merge.
-
