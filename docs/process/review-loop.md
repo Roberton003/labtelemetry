@@ -92,3 +92,19 @@ No LabTelemetry, o PRD orienta o que deve ser construido; a PR entrega uma parte
 Se hooks locais criarem commits automaticos de checkpoint na branch, a correcao preferida antes de integrar no `master` e usar squash merge no GitHub. Assim o historico final fica limpo mesmo que a branch de trabalho contenha checkpoints intermediarios.
 
 Quando houver necessidade de historico local limpo antes do push, criar uma branch nova a partir de `master` e cherry-pickar apenas os commits intencionais. Nao usar comandos destrutivos para limpar historico sem autorizacao explicita.
+
+## Integracao Com O Harness OpenCode
+
+Este workflow esta implementado como skill de orquestracao no OpenCode:
+
+- **Skill:** `~/.config/opencode/skills/review-loop/SKILL.md`
+- **Nome:** `review-loop`
+- **Tipo:** Orquestrador leve — compoe skills existentes sem duplicar
+- **Skills componentes:** `adversarial-review` (fidelidade plano→diff), `code-quality` (checklist de codigo), `verification-engineer` (execucao de testes)
+- **Agentes de apoio:** `adversarial-reviewer`, `verification-engineer`, `security-reviewer`, `completion-auditor`
+
+Para ativar: `skill("review-loop")` antes de ciclos T1-T3 no LabTelemetry.
+
+Detalhes
+
+https://github.com/hamelsmu/claude-review-loop
