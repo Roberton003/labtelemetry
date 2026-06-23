@@ -33,3 +33,12 @@ automação40/
 
 # Local archival context, intentionally excluded from Git history
 /apendices/
+/private-docs/
+
+# Internal project governance and session records are local-only.
+/docs/internal/
+/docs/session-handoffs/
+/docs/plans/
+/docs/execution/
+/docs/prd/
+/docs/process/
