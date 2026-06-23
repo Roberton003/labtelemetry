@@ -212,9 +212,3 @@ Testes contra PostgreSQL:
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 .venv/bin/python labtelemetry/manage.py test telemetry
 ```
-
-## Documentacao Publica
-
-Este repositorio publica apenas documentacao de produto, arquitetura, API, operacao e seguranca. Planejamento interno, registros de trabalho, apendices privados e notas de decisao nao publicas ficam fora do Git.
-
-Consulte `docs/security.md` antes de adicionar novos documentos ao repositorio.
