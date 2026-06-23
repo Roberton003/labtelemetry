@@ -1,6 +1,17 @@
 # LabTelemetry
 
-LabTelemetry e um laboratorio Django para simular telemetria industrial OT/IT, persistir leituras temporais, aplicar quality gates, expor API JSON e visualizar o estado operacional em dashboard web.
+<p align="center">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="Django 5" src="https://img.shields.io/badge/Django-5.x-092E20?logo=django&logoColor=white">
+  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white">
+  <img alt="OpenTelemetry" src="https://img.shields.io/badge/OpenTelemetry-4B9CD3?logo=opentelemetry&logoColor=white">
+  <img alt="Jaeger" src="https://img.shields.io/badge/Jaeger-66CFE3?logo=jaeger&logoColor=white">
+  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-FF6384?logo=chartdotjs&logoColor=white">
+  <img alt="HTMX" src="https://img.shields.io/badge/HTMX-3366CC?logo=htmx&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white">
+</p>
+
+LabTelemetry e um laboratorio Django para telemetria industrial OT/IT, com simulador reproduzivel, persistencia temporal, quality gates, API JSON, dashboard operacional e observabilidade local.
 
 Documentacao publica:
 
