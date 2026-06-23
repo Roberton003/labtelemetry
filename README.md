@@ -223,3 +223,12 @@ Testes contra PostgreSQL:
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 .venv/bin/python labtelemetry/manage.py test telemetry
 ```
+
+## Artefatos Analiticos
+
+Documentos publicos que detalham o pipeline de dados e consultas SQL:
+
+- Modelo de dados e semantica: `docs/data-model.md`
+- Contratos de dados (schemas, endpoints, regras de qualidade): `docs/data-contract.md`
+- Replay, deduplicacao e idempotencia: `docs/replay-idempotency.md`
+- Consultas SQL analiticas: `sql/analytics/` (5 consultas: volume, taxa anomalia, leituras recentes, sensores com alerta, freshness)
