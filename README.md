@@ -86,6 +86,28 @@ Alias operacional para gerar multiplas iteracoes:
 
 O simulador cria leituras para sensores padrao quando necessario e aplica os quality gates antes de persistir o status final.
 
+## Fontes De Dados
+
+O LabTelemetry trabalha com duas origens principais na camada de ingestao:
+
+- `simulator`: fonte controlada para laboratorio, testes e reproducoes deterministicas;
+- `modbus`: adapter TCP para fonte OT real, com host, porta, unit id e timeout configuraveis.
+
+Comando de ingestao unificado:
+
+```bash
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source modbus --modbus-host 127.0.0.1 --modbus-port 502 --modbus-unit 1
+```
+
+Health operacional das fontes:
+
+```bash
+curl -s http://127.0.0.1:8000/api/health/sources/
+```
+
+O endpoint retorna um resumo por fonte com status e metadados basicos. O simulador e o adapter Modbus permanecem acessiveis como classes separadas em `telemetry.sources`.
+
 ## Executar A Aplicacao
 
 Sem tracing:
@@ -115,6 +137,7 @@ Endpoints atuais:
 - `GET /api/sensors/<id>/readings/?limit=100`
 - `GET /api/alerts/active/`
 - `GET /api/summary/`
+- `GET /api/health/sources/`
 
 Exemplo:
 

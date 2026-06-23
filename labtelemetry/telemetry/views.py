@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
+from telemetry.sources import ModbusTCPAdapter, SimulatorAdapter
 
 # tracer para spans manuais (ex.: summary)
 try:
@@ -15,6 +16,24 @@ except Exception:
 
 def _json(data, status=200):
     return JsonResponse(data, encoder=DjangoJSONEncoder, status=status, safe=False)
+
+
+def _source_health_payload() -> dict:
+    sources = {
+        "simulator": SimulatorAdapter().health(),
+    }
+
+    if ModbusTCPAdapter is None:
+        sources["modbus"] = {
+            "name": "modbus",
+            "status": "unavailable",
+            "last_read": None,
+            "reason": "pymodbus not installed",
+        }
+    else:
+        sources["modbus"] = ModbusTCPAdapter().health()
+
+    return sources
 
 
 @require_http_methods(["GET"])
@@ -131,6 +150,11 @@ def summary(request):
             span.set_attribute("endpoint", "summary")
             return _summary_data()
     return _summary_data()
+
+
+@require_http_methods(["GET"])
+def source_health(request):
+    return _json(_source_health_payload())
 
 
 def _summary_data():

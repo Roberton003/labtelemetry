@@ -16,4 +16,5 @@ urlpatterns = [
     path("api/sensors/<int:sensor_id>/readings/", views.sensor_readings, name="sensor-readings"),
     path("api/alerts/active/", views.alerts_active, name="alerts-active"),
     path("api/summary/", views.summary, name="summary"),
+    path("api/health/sources/", views.source_health, name="source-health"),
 ]
