@@ -32,6 +32,11 @@ class TelemetryReading(models.Model):
     calibrated_value = models.FloatField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="NORMAL")
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["sensor", "timestamp"]),
+        ]
+
     def __str__(self):
         return f"{self.sensor.name} - {self.timestamp} - {self.calibrated_value}"
 
