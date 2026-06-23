@@ -157,6 +157,12 @@ def source_health(request):
     return _json(_source_health_payload())
 
 
+@require_http_methods(["GET"])
+def dashboard_source_health(request):
+    sources = _source_health_payload()
+    return render(request, "telemetry/_source_health.html", {"sources": sources.items()})
+
+
 def _summary_data():
     total_sensors = TelemetrySensor.objects.count()
     total_readings = TelemetryReading.objects.count()

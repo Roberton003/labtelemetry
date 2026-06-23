@@ -262,6 +262,15 @@ class ApiEndpointTest(TestCase):
             timestamps = [r["timestamp"] for r in data]
             self.assertEqual(timestamps, sorted(timestamps, reverse=True))
 
+    def test_source_health_returns_json(self):
+        resp = self.client.get("/api/health/sources/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("simulator", data)
+        self.assertIn("modbus", data)
+        self.assertIn("status", data["simulator"])
+        self.assertIn("status", data["modbus"])
+
     def test_dashboard_renders(self):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
@@ -284,6 +293,12 @@ class ApiEndpointTest(TestCase):
         resp = self.client.get("/dashboard/sensors/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Sensor pH", resp.content)
+
+    def test_dashboard_source_health_renders(self):
+        resp = self.client.get("/dashboard/health/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Simulator", resp.content)
+        self.assertIn(b"Modbus", resp.content)
 
 
 class ThresholdConfigTest(TestCase):

@@ -10,6 +10,7 @@ urlpatterns = [
     path("dashboard/readings/", views.dashboard_readings, name="dashboard-readings"),
     path("dashboard/alerts/", views.dashboard_alerts, name="dashboard-alerts"),
     path("dashboard/sensors/", views.dashboard_sensors, name="dashboard-sensors"),
+    path("dashboard/health/", views.dashboard_source_health, name="dashboard-health"),
     # API REST JSON (prefixo /api/ conforme Plano 001)
     path("api/sensors/", views.sensor_list, name="sensor-list"),
     path("api/readings/recent/", views.readings_recent, name="readings-recent"),

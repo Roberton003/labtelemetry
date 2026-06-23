@@ -47,6 +47,18 @@
       </div>
     </div>
 
+    <div class="row mb-4" id="source-health"
+         hx-get="/dashboard/health/" hx-trigger="load, every 15s" hx-swap="innerHTML">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Fontes de Dados</h5>
+            <div class="text-center py-2"><div class="spinner-border spinner-border-sm"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <ul class="nav nav-tabs mb-3" id="dashboardTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="readings-tab" data-bs-toggle="tab"
