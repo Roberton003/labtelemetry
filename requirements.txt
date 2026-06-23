@@ -1,0 +1,8 @@
+Django==5.2.9
+psycopg[binary]
+dj-database-url
+python-dotenv
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-django
+opentelemetry-instrumentation-psycopg

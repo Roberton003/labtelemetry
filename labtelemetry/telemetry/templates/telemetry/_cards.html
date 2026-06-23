@@ -1,0 +1,32 @@
+<div class="col-md-3">
+  <div class="card text-bg-primary">
+    <div class="card-body">
+      <h6 class="card-title">Sensores</h6>
+      <span class="fs-2">{{ total_sensors }}</span>
+    </div>
+  </div>
+</div>
+<div class="col-md-3">
+  <div class="card text-bg-secondary">
+    <div class="card-body">
+      <h6 class="card-title">Leituras</h6>
+      <span class="fs-2">{{ total_readings }}</span>
+    </div>
+  </div>
+</div>
+<div class="col-md-3">
+  <div class="card text-bg-danger">
+    <div class="card-body">
+      <h6 class="card-title">Alertas</h6>
+      <span class="fs-2">{{ active_alerts }}</span>
+    </div>
+  </div>
+</div>
+<div class="col-md-3">
+  <div class="card text-bg-dark">
+    <div class="card-body">
+      <h6 class="card-title">Última Leitura</h6>
+      <span class="fs-6">{{ last_reading.timestamp|default:"---" }}</span>
+    </div>
+  </div>
+</div>
