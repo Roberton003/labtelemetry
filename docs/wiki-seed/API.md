@@ -1,3 +1,5 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # API
 
 All JSON endpoints are served under `/api/`.
@@ -25,3 +27,13 @@ All JSON endpoints are served under `/api/`.
 curl -s http://127.0.0.1:8000/api/summary/
 curl -s http://127.0.0.1:8000/api/health/sources/
 ```
+
+## Reading Payload Highlights
+
+Recent reading payloads expose:
+
+- `raw_value`
+- `calibrated_value`
+- `value` as an alias for `calibrated_value`
+- `source` for short lineage
+- `status` after backend quality evaluation

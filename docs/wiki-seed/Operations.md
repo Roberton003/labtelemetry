@@ -1,3 +1,5 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # Operations
 
 ## Local Setup
@@ -39,3 +41,9 @@ Open:
 ```
 
 For a full parallel terminal validation flow, see [[Validation-Guide]].
+
+## Runtime Endpoints
+
+- Dashboard: `http://127.0.0.1:8000/`
+- Admin: `http://127.0.0.1:8000/admin/`
+- Jaeger: `http://127.0.0.1:16686`

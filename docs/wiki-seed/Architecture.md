@@ -1,3 +1,5 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # Architecture
 
 LabTelemetry follows a simple layered architecture:
@@ -37,3 +39,12 @@ Current adapters:
 - `ModbusTCPAdapter`: configurable host, port, unit id, and timeout
 
 The simulator remains the default reproducible path. Real Modbus validation depends on an available device or simulator.
+
+## Design Intent
+
+The system favors small, explicit boundaries:
+
+- source adapters remain separate from persistence
+- quality rules stay in backend code
+- JSON endpoints stay simple enough to feed the dashboard directly
+- observability remains optional and local-first

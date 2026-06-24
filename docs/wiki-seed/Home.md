@@ -1,28 +1,38 @@
 # LabTelemetry Wiki
 
-LabTelemetry is a Django OT/IT telemetry lab focused on a reproducible end-to-end flow:
+LabTelemetry is a Django OT/IT telemetry lab designed to be read, run, and validated quickly.
 
 `simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API -> dashboard`
 
-## Start Here
+## Navigation
 
-- [[Overview]]
-- [[Architecture]]
-- [[API]]
-- [[Operations]]
-- [[Validation-Guide]]
+| Start Here | Reference |
+|---|---|
+| [[Overview]] | [[API]] |
+| [[Architecture]] | [[Operations]] |
+| [[Validation-Guide]] | |
 
-## What This Project Already Has
+## Platform Snapshot
 
-- Industrial telemetry simulation for pH, turbidity, and TOC
-- PostgreSQL support with SQLite fallback
-- Quality gates and operational alerts
-- JSON API under `/api/...`
-- Server-rendered dashboard with HTMX and Chart.js
-- Optional OpenTelemetry tracing with Jaeger
-- Source adapters for simulator and Modbus TCP
+| Area | Current State |
+|---|---|
+| Runtime | Django 5.2.9 |
+| Persistence | PostgreSQL 16 via Docker Compose, SQLite fallback |
+| UI | Server-rendered dashboard with HTMX and Chart.js |
+| Telemetry Sources | Simulator and Modbus TCP adapter surface |
+| Observability | Optional OpenTelemetry with Jaeger |
+| Validation | Automated tests plus end-to-end local manual |
 
-## Current Scope
+## Recommended Paths
 
-This wiki covers how to understand, run, and validate the public project.
-Private planning material, internal notes, and session records stay out of the wiki.
+If you want to:
+
+- understand the project quickly: start at [[Overview]]
+- inspect runtime boundaries: open [[Architecture]]
+- run the system locally: open [[Operations]]
+- validate the entire flow in practice: open [[Validation-Guide]]
+- inspect the public contract: open [[API]]
+
+## Scope
+
+This wiki covers the public project only. Internal planning, session history, and private notes remain outside the wiki.

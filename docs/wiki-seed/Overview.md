@@ -1,3 +1,5 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # Overview
 
 LabTelemetry is a Django-based OT/IT telemetry lab. It simulates industrial sensor readings, persists time-series data, applies data quality rules, exposes JSON endpoints, and renders an operational dashboard.
@@ -14,3 +16,15 @@ The project is intentionally small and reproducible. It demonstrates the path fr
 - Django dashboard with HTMX and Chart.js
 - Optional OpenTelemetry tracing with Jaeger
 - Extensible source adapters for simulator and Modbus TCP ingestion
+
+## Why This Project Exists
+
+Many data projects demonstrate tools but not the shape of operational data at the source. LabTelemetry stays intentionally small so the path from telemetry generation to application-facing consumption is visible and testable.
+
+## Public Positioning
+
+LabTelemetry is best understood as:
+
+- a reproducible OT/IT telemetry lab
+- a portfolio project with real operational flow
+- a compact data product, not a generic platform

@@ -1,3 +1,5 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # Validation Guide
 
 This guide validates the full local flow:
@@ -64,3 +66,11 @@ export OTEL_ENABLED=True
 .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
 curl -sS "http://127.0.0.1:16686/api/traces?service=labtelemetry&limit=5"
 ```
+
+## What Success Looks Like
+
+- the dashboard renders
+- source health shows simulator as `ok`
+- API summary returns non-zero sensors and readings
+- recent readings expose `source`
+- test suite remains green after the run
