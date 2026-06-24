@@ -135,4 +135,5 @@ class Command(BaseCommand):
             timestamp=timestamp,
             raw_value=round(sample.value, 4),
             calibrated_value=round(sample.value, 4),
+            source=sample.source[:100],
         )

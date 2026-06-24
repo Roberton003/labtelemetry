@@ -22,5 +22,8 @@ curl -s http://127.0.0.1:8000/api/health/sources/
 
 ## Notes
 
+- Reading payloads include `source`, a short lineage field such as
+  `simulator:seed=42` or `modbus:host:port`.
+
 - Legacy bare API routes without `/api/` are not part of the public contract.
 - The source health endpoint is operational metadata. It does not replace a live Modbus connectivity test.

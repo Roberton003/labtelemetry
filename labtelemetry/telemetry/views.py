@@ -59,6 +59,7 @@ def readings_recent(request):
             "raw_value": r.raw_value,
             "calibrated_value": r.calibrated_value,
             "value": r.calibrated_value,
+            "source": r.source,
             "status": r.status,
         }
         for r in readings
@@ -79,6 +80,7 @@ def sensor_readings(request, sensor_id):
             "timestamp": r.timestamp,
             "raw_value": r.raw_value,
             "calibrated_value": r.calibrated_value,
+            "source": r.source,
             "status": r.status,
         }
         for r in readings

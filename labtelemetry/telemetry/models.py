@@ -30,6 +30,7 @@ class TelemetryReading(models.Model):
     timestamp = models.DateTimeField()
     raw_value = models.FloatField()
     calibrated_value = models.FloatField()
+    source = models.CharField(max_length=100, blank=True, default="")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="NORMAL")
 
     class Meta:

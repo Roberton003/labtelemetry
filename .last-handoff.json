@@ -1,29 +1,31 @@
 {
-  "last_session": "2026-06-23T20:02:25-03:00",
+  "last_session": "2026-06-23T21:12:11-03:00",
   "project": "labtelemetry",
   "observed_branch": "master",
-  "context_branch": "sanitization/nc-001-009",
   "plan": "005",
-  "package_completed": "A",
-  "summary": "Plano 005 Pacote A encerrado com artefatos de modelo de dados, contrato de dados, replay/idempotencia e SQL analitico.",
+  "package_completed": "B",
+  "summary": "Plano 005 Pacote B concluido com source persistido em TelemetryReading, teste do ModbusTCPAdapter sem socket real e docs publicos alinhados ao contrato atual.",
   "files": [
-    "README.md",
+    "labtelemetry/telemetry/models.py",
+    "labtelemetry/telemetry/migrations/0003_telemetryreading_source.py",
+    "labtelemetry/telemetry/management/commands/ingest_telemetry.py",
+    "labtelemetry/telemetry/views.py",
+    "labtelemetry/telemetry/test_sources.py",
+    "labtelemetry/telemetry/test_ingest_telemetry.py",
+    "labtelemetry/telemetry/tests.py",
+    "docs/api.md",
+    "docs/architecture.md",
     "docs/data-model.md",
     "docs/data-contract.md",
-    "docs/replay-idempotency.md",
-    "sql/analytics/README.md",
-    "sql/analytics/freshness.sql",
-    "sql/analytics/leituras_recentes.sql",
-    "sql/analytics/sensores_com_alerta.sql",
-    "sql/analytics/taxa_anomalia.sql",
-    "sql/analytics/volume_por_janela.sql",
-    "docs/session-handoffs/20260623T200225_pacote_a_encerramento.md"
+    "docs/session-handoffs/20260623T211211_pacote_b_encerramento.md"
   ],
   "validations": [
     ".venv/bin/python labtelemetry/manage.py check",
     ".venv/bin/python labtelemetry/manage.py makemigrations --check --dry-run",
-    ".venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1"
+    ".venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1",
+    ".venv/bin/python labtelemetry/manage.py migrate",
+    ".venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once"
   ],
-  "handoff": "docs/session-handoffs/20260623T200225_pacote_a_encerramento.md",
-  "resume_prompt": "cd \"/media/Arquivos/Engenharia dados IOT 2026/labtelemetry\"; git status --short; .venv/bin/python labtelemetry/manage.py check; .venv/bin/python labtelemetry/manage.py makemigrations --check --dry-run; .venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1"
+  "handoff": "docs/session-handoffs/20260623T211211_pacote_b_encerramento.md",
+  "resume_prompt": "cd \"/media/Arquivos/Engenharia dados IOT 2026/labtelemetry\"; git status --short; .venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1"
 }

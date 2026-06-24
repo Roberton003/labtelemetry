@@ -40,6 +40,12 @@ class TelemetryReadingModelTest(TestCase):
         )
         self.assertEqual(reading.status, "NORMAL")
 
+    def test_default_source_is_blank(self):
+        reading = TelemetryReading.objects.create(
+            sensor=self.sensor, timestamp=tz.now(), raw_value=7.0, calibrated_value=7.0
+        )
+        self.assertEqual(reading.source, "")
+
     def test_sensor_reading_relationship(self):
         reading = TelemetryReading.objects.create(
             sensor=self.sensor, timestamp=tz.now(), raw_value=7.0, calibrated_value=7.0
@@ -223,6 +229,12 @@ class ApiEndpointTest(TestCase):
         self.assertGreaterEqual(len(data), 1)
         self.assertIn("parameter", data[0])
         self.assertIn("value", data[0])
+
+    def test_readings_recent_includes_source(self):
+        resp = self.client.get("/api/readings/recent/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("source", data[0])
 
     def test_readings_recent_respects_limit(self):
         resp = self.client.get("/api/readings/recent/?limit=1")

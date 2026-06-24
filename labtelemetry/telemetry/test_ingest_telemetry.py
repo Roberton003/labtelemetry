@@ -119,6 +119,7 @@ class IngestTelemetryCommandTest(TestCase):
         self.assertEqual(TelemetryAlert.objects.count(), 1)
         reading = TelemetryReading.objects.get(sensor=self.sensor_turb)
         self.assertEqual(reading.status, "OUT_OF_BOUNDS")
+        self.assertEqual(reading.source, "stub:simulator")
         self.assertIn("Source health: ok", out.getvalue())
 
     def test_once_with_modbus_source_uses_adapter_configuration(self):
@@ -148,7 +149,9 @@ class IngestTelemetryCommandTest(TestCase):
         self.assertAlmostEqual(adapter._timeout, 0.25)
         self.assertTrue(adapter.closed)
         self.assertEqual(TelemetryReading.objects.count(), 1)
-        self.assertEqual(TelemetryReading.objects.get(sensor=self.sensor_ph).status, "NORMAL")
+        reading = TelemetryReading.objects.get(sensor=self.sensor_ph)
+        self.assertEqual(reading.status, "NORMAL")
+        self.assertEqual(reading.source, "modbus:plc.local:1502")
         self.assertIn("Source health: connected", out.getvalue())
 
 
