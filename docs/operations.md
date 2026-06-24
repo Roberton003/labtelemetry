@@ -1,16 +1,22 @@
 # Operations
 
-Manual detalhado de validacao ponta a ponta:
-
-- `docs/manual_validacao_ponta_a_ponta.md`
-
-## Local Setup
+## Setup
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
 docker compose up -d
+```
+
+## Database
+
+SQLite is the fallback when `DATABASE_URL` is not set.
+
+For PostgreSQL:
+
+```bash
+export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 .venv/bin/python labtelemetry/manage.py migrate
 ```
 
@@ -34,28 +40,28 @@ Open:
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
 ```
 
-## PostgreSQL
+## What The UI Shows
 
-SQLite is the fallback when `DATABASE_URL` is not set.
+- summary cards
+- source health
+- recent readings
+- active alerts
+- sensor list
+- a time-series chart rendered with Chart.js
 
-For PostgreSQL:
+## Observability
+
+Tracing is disabled by default:
+
+```bash
+OTEL_ENABLED=False
+```
+
+To validate traces locally:
 
 ```bash
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
-.venv/bin/python labtelemetry/manage.py migrate
-```
-
-## OpenTelemetry
-
-Tracing is disabled by default. To enable it locally:
-
-```bash
-OTEL_ENABLED=True .venv/bin/python labtelemetry/manage.py runserver
-```
-
-Then generate a request and inspect Jaeger:
-
-```bash
+OTEL_ENABLED=True .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
 curl -s http://127.0.0.1:8000/api/summary/
 curl -s "http://localhost:16686/api/traces?service=labtelemetry&limit=5"
 ```
@@ -65,5 +71,7 @@ curl -s "http://localhost:16686/api/traces?service=labtelemetry&limit=5"
 ```bash
 .venv/bin/python labtelemetry/manage.py check
 .venv/bin/python labtelemetry/manage.py makemigrations --check --dry-run
-.venv/bin/python labtelemetry/manage.py test telemetry
+.venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1
 ```
+
+For a full parallel-terminal walkthrough, use [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md).
