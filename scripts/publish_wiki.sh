@@ -18,6 +18,9 @@ fi
 git clone "${WIKI_REPO_URL}" "${TMP_DIR}"
 find "${TMP_DIR}" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 cp "${WIKI_SRC_DIR}"/*.md "${TMP_DIR}/"
+mkdir -p "${TMP_DIR}/assets"
+cp "${ROOT_DIR}/docs/assets/"* "${TMP_DIR}/assets/"
+find "${TMP_DIR}/assets" -type f -exec chmod 644 {} +
 
 cd "${TMP_DIR}"
 git add .

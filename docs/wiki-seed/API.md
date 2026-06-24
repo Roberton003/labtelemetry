@@ -21,19 +21,20 @@ All JSON endpoints are served under `/api/`.
 - Legacy bare API routes without `/api/` are not part of the public contract
 - The source health endpoint is operational metadata; it does not replace a live Modbus connectivity test
 
+## Payload Shape
+
+The recent readings endpoint returns a compact operational payload:
+
+- `sensor_name`
+- `parameter`
+- `raw_value`
+- `calibrated_value`
+- `source`
+- `status`
+
 ## Example
 
 ```bash
 curl -s http://127.0.0.1:8000/api/summary/
 curl -s http://127.0.0.1:8000/api/health/sources/
 ```
-
-## Reading Payload Highlights
-
-Recent reading payloads expose:
-
-- `raw_value`
-- `calibrated_value`
-- `value` as an alias for `calibrated_value`
-- `source` for short lineage
-- `status` after backend quality evaluation

@@ -32,6 +32,14 @@ Open:
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
 ```
 
+## What The UI Shows
+
+- summary cards
+- source health
+- recent readings
+- active alerts
+- sensor list
+
 ## Validation
 
 ```bash
@@ -41,9 +49,3 @@ Open:
 ```
 
 For a full parallel terminal validation flow, see [[Validation-Guide]].
-
-## Runtime Endpoints
-
-- Dashboard: `http://127.0.0.1:8000/`
-- Admin: `http://127.0.0.1:8000/admin/`
-- Jaeger: `http://127.0.0.1:16686`

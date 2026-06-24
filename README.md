@@ -1,23 +1,31 @@
 # LabTelemetry
 
 <p align="center">
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
-  <img alt="Django 5" src="https://img.shields.io/badge/Django-5.x-092E20?logo=django&logoColor=white">
-  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white">
-  <img alt="OpenTelemetry" src="https://img.shields.io/badge/OpenTelemetry-4B9CD3?logo=opentelemetry&logoColor=white">
-  <img alt="Jaeger" src="https://img.shields.io/badge/Jaeger-66CFE3?logo=jaeger&logoColor=white">
-  <img alt="HTMX" src="https://img.shields.io/badge/HTMX-3366CC?logo=htmx&logoColor=white">
-  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-FF6384?logo=chartdotjs&logoColor=white">
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white">
+  <img src="docs/assets/labtelemetry_hero_banner.png" alt="LabTelemetry banner" width="100%">
+</p>
+
+<p align="center">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img alt="Django 5" src="https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white">
+  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
+  <img alt="OpenTelemetry" src="https://img.shields.io/badge/OpenTelemetry-4B9CD3?style=for-the-badge&logo=opentelemetry&logoColor=white">
+  <img alt="Jaeger" src="https://img.shields.io/badge/Jaeger-66CFE3?style=for-the-badge&logo=jaeger&logoColor=white">
+  <img alt="HTMX" src="https://img.shields.io/badge/HTMX-3366CC?style=for-the-badge&logo=htmx&logoColor=white">
+  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 </p>
 
 <p align="center">
   Reproducible OT/IT telemetry lab with simulation, quality rules, JSON API, dashboard, and local observability.
 </p>
 
-LabTelemetry is a Django project built to demonstrate a complete telemetry path without inflating the stack beyond what the use case needs:
+## Overview
 
-`simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API -> dashboard`
+LabTelemetry is a Django project built to demonstrate a complete telemetry path without inflating the stack beyond what the use case needs.
+
+```text
+simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API -> dashboard
+```
 
 ## Platform Snapshot
 
@@ -41,78 +49,60 @@ LabTelemetry is a Django project built to demonstrate a complete telemetry path 
 - Source health checks for simulator and Modbus
 - Optional traces in Jaeger
 
-## Architecture
+## Dashboard
 
-```mermaid
-graph TD
-    A[Simulated or Modbus source] --> B[Ingestion command]
-    B --> C[Quality rules and alerts]
-    C --> D[(PostgreSQL or SQLite)]
-    D --> E[JSON API]
-    E --> F[Dashboard with HTMX and Chart.js]
-    E --> G[OpenTelemetry traces]
-    G --> H[Jaeger]
-```
+<p align="center">
+  <img src="docs/assets/dashboard_mockup.png" alt="LabTelemetry dashboard mockup" width="90%">
+</p>
 
-## Quick Start
-
-### 1. Bootstrap
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env
-docker compose up -d
-```
-
-### 2. Migrate and run
-
-```bash
-export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
-.venv/bin/python labtelemetry/manage.py migrate
-.venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
-```
-
-### 3. Generate telemetry
-
-```bash
-.venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
-curl -s http://127.0.0.1:8000/api/summary/
-```
-
-Open:
-
-- Dashboard: `http://127.0.0.1:8000/`
-- Admin: `http://127.0.0.1:8000/admin/`
-- Jaeger: `http://127.0.0.1:16686`
+The user interface is built with Django templates, HTMX, and Chart.js.
 
 ## Documentation Map
 
 | Document | Purpose |
 |---|---|
-| `docs/overview.md` | Project scope and public positioning |
-| `docs/architecture.md` | Runtime structure and component boundaries |
-| `docs/api.md` | API endpoints and public contract notes |
-| `docs/operations.md` | Local setup and operational commands |
-| `docs/manual_validacao_ponta_a_ponta.md` | Full end-to-end validation in parallel terminals |
-| `docs/data-model.md` | Operational data model and semantics |
-| `docs/data-contract.md` | Public API and data contract |
-| `docs/replay-idempotency.md` | Replay, deduplication, and idempotency behavior |
-| `sql/analytics/` | Example analytical SQL queries |
-| `docs/security.md` | Public documentation boundary and secret handling |
+| [docs/overview.md](docs/overview.md) | Project scope and public positioning |
+| [docs/architecture.md](docs/architecture.md) | Runtime structure and component boundaries |
+| [docs/api.md](docs/api.md) | API endpoints and public contract notes |
+| [docs/operations.md](docs/operations.md) | Local setup and operational commands |
+| [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md) | Full end-to-end validation in parallel terminals |
+| [docs/data-model.md](docs/data-model.md) | Operational data model and database schemas |
+| [docs/data-contract.md](docs/data-contract.md) | Public API and data contract definition |
+| [docs/replay-idempotency.md](docs/replay-idempotency.md) | Replay, deduplication, and idempotency behavior |
+| [docs/security.md](docs/security.md) | Public documentation boundary and secret handling |
 
-## Frontend Status
+## Quick Start
 
-The project already includes a frontend. It is not a separate SPA; the user interface is delivered by Django templates and consumes the JSON API with HTMX and Chart.js.
+### Bootstrap Environment
 
-Current UI scope:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+docker compose up -d
+```
 
-- summary cards
-- source health panel
-- recent readings tab
-- active alerts tab
-- sensor list tab
-- time-series chart
+### Migrate and Run
+
+```bash
+export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
+python labtelemetry/manage.py migrate
+python labtelemetry/manage.py runserver 127.0.0.1:8000
+```
+
+### Generate Telemetry
+
+```bash
+python labtelemetry/manage.py ingest_telemetry --source simulator --once
+curl -s http://127.0.0.1:8000/api/summary/
+```
+
+Open locally:
+
+- Dashboard: http://127.0.0.1:8000/
+- Admin: http://127.0.0.1:8000/admin/
+- Jaeger: http://127.0.0.1:16686
 
 ## Observability
 
@@ -128,12 +118,12 @@ To validate traces locally:
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 OTEL_ENABLED=True .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
 curl -s http://127.0.0.1:8000/api/summary/
-curl -s "http://127.0.0.1:16686/api/traces?service=labtelemetry&limit=5"
+curl -s "http://localhost:16686/api/traces?service=labtelemetry&limit=5"
 ```
 
 ## Validation
 
-### Fast sanity
+### Fast Sanity
 
 ```bash
 .venv/bin/python labtelemetry/manage.py check
@@ -141,34 +131,22 @@ curl -s "http://127.0.0.1:16686/api/traces?service=labtelemetry&limit=5"
 .venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1
 ```
 
-### Full practical flow
+### Full Practical Flow
 
-Use the manual in `docs/manual_validacao_ponta_a_ponta.md`.
+Use [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md) for the parallel-terminal walkthrough.
 
-That guide validates:
-
-- infrastructure
-- migrations
-- ingestion
-- API
-- dashboard partials
-- browser flow
-- optional tracing
-
-## Current Boundaries
+## Boundaries
 
 This repository is intentionally scoped as a local lab and portfolio-grade system, not a generalized production platform.
 
 Out of current public scope:
 
-- full production auth
-- public cloud deployment
-- distributed streaming
-- heavy orchestration
-- real PLC validation as a default path
+- distributed stream processing
+- production authentication
+- multi-region cloud infrastructure
 
 ## Wiki
 
 The project wiki is available at:
 
-- `https://github.com/Roberton003/labtelemetry/wiki`
+- https://github.com/Roberton003/labtelemetry/wiki

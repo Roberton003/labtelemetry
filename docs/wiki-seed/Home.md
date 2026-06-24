@@ -1,4 +1,10 @@
+[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+
 # LabTelemetry Wiki
+
+<p align="center">
+  <img src="assets/labtelemetry_hero_banner.png" alt="LabTelemetry banner" width="100%">
+</p>
 
 LabTelemetry is a Django OT/IT telemetry lab designed to be read, run, and validated quickly.
 
@@ -23,11 +29,13 @@ LabTelemetry is a Django OT/IT telemetry lab designed to be read, run, and valid
 | Observability | Optional OpenTelemetry with Jaeger |
 | Validation | Automated tests plus end-to-end local manual |
 
+<p align="center">
+  <img src="assets/dashboard_mockup.png" alt="LabTelemetry dashboard mockup" width="92%">
+</p>
+
 ## Recommended Paths
 
-If you want to:
-
-- understand the project quickly: start at [[Overview]]
+- understand the project quickly: open [[Overview]]
 - inspect runtime boundaries: open [[Architecture]]
 - run the system locally: open [[Operations]]
 - validate the entire flow in practice: open [[Validation-Guide]]

@@ -2,9 +2,11 @@
 
 # Validation Guide
 
-This guide validates the full local flow:
+This guide outlines a structured approach to validate the end-to-end data pipeline locally:
 
-`simulator -> ingestion -> PostgreSQL -> JSON API -> Django/HTMX/Chart.js dashboard`
+```text
+Simulator Ingest -> Ingest Pipeline -> PostgreSQL -> JSON API -> HTMX/Chart.js Dashboard
+```
 
 ## Parallel Execution
 
@@ -53,11 +55,15 @@ Expected:
 
 Open `http://127.0.0.1:8000/` and confirm:
 
-- LabTelemetry title renders
-- summary cards show sensors and readings
-- recent readings tab contains rows
-- source health shows simulator as `ok`
-- chart renders without a blank canvas
+1. The title renders as LabTelemetry.
+2. Summary cards show sensors and readings.
+3. The recent readings tab contains rows.
+4. The source health panel shows simulator as `ok`.
+5. The chart renders without a blank canvas.
+
+<p align="center">
+  <img src="assets/dashboard_mockup.png" alt="Dashboard mockup" width="88%">
+</p>
 
 ## Optional Tracing
 
@@ -73,4 +79,4 @@ curl -sS "http://127.0.0.1:16686/api/traces?service=labtelemetry&limit=5"
 - source health shows simulator as `ok`
 - API summary returns non-zero sensors and readings
 - recent readings expose `source`
-- test suite remains green after the run
+- the test suite remains green after the run

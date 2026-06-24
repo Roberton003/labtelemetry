@@ -19,12 +19,12 @@ The project is intentionally small and reproducible. It demonstrates the path fr
 
 ## Why This Project Exists
 
-Many data projects demonstrate tools but not the shape of operational data at the source. LabTelemetry stays intentionally small so the path from telemetry generation to application-facing consumption is visible and testable.
+Many data projects demonstrate tools but not the shape of operational data at the source. LabTelemetry stays intentionally small so the path from telemetry generation to application-facing consumption is visible, testable, and robust.
 
 ## Public Positioning
 
 LabTelemetry is best understood as:
 
-- a reproducible OT/IT telemetry lab
-- a portfolio project with real operational flow
-- a compact data product, not a generic platform
+1. a reproducible OT/IT telemetry lab
+2. a portfolio project with real operational flow
+3. a compact data product
