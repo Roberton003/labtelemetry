@@ -47,7 +47,7 @@ def readings_recent(request):
     limit = min(int(request.GET.get("limit", 50)), 500)
     readings = (
         TelemetryReading.objects.select_related("sensor")
-        .order_by("-timestamp")[:limit]
+        .order_by("-timestamp", "-id")[:limit]
     )
     data = [
         {
@@ -72,7 +72,7 @@ def sensor_readings(request, sensor_id):
     limit = min(int(request.GET.get("limit", 100)), 500)
     readings = (
         TelemetryReading.objects.filter(sensor_id=sensor_id)
-        .order_by("-timestamp")[:limit]
+        .order_by("-timestamp", "-id")[:limit]
     )
     data = [
         {
@@ -129,7 +129,7 @@ def dashboard_cards(request):
 
 @require_http_methods(["GET"])
 def dashboard_readings(request):
-    readings = TelemetryReading.objects.select_related("sensor").order_by("-timestamp")[:20]
+    readings = TelemetryReading.objects.select_related("sensor").order_by("-timestamp", "-id")[:20]
     return render(request, "telemetry/_readings.html", {"readings": readings})
 
 
@@ -169,7 +169,7 @@ def _summary_data():
     total_sensors = TelemetrySensor.objects.count()
     total_readings = TelemetryReading.objects.count()
     active_alerts = TelemetryAlert.objects.filter(is_active=True).count()
-    last_reading = TelemetryReading.objects.order_by("-timestamp").first()
+    last_reading = TelemetryReading.objects.order_by("-timestamp", "-id").first()
     return _json({
         "total_sensors": total_sensors,
         "total_readings": total_readings,

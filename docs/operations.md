@@ -1,5 +1,9 @@
 # Operations
 
+Manual detalhado de validacao ponta a ponta:
+
+- `docs/manual_validacao_ponta_a_ponta.md`
+
 ## Local Setup
 
 ```bash

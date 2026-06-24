@@ -19,6 +19,7 @@ Documentacao publica:
 - Arquitetura: `docs/architecture.md`
 - API: `docs/api.md`
 - Operacao local: `docs/operations.md`
+- Manual ponta a ponta: `docs/manual_validacao_ponta_a_ponta.md`
 - Politica de documentacao publica: `docs/security.md`
 
 ## Stack
