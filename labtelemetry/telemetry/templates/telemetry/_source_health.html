@@ -1,18 +1,14 @@
 {% for name, info in sources %}
-<div class="col-md-6 mb-2">
-  <div class="card border-{% if info.status == 'ok' or info.status == 'connected' %}success{% elif info.status == 'unavailable' %}warning{% else %}danger{% endif %}">
-    <div class="card-body py-2">
-      <strong>{{ info.name|title }}</strong>
-      <span class="badge bg-{% if info.status == 'ok' or info.status == 'connected' %}success{% elif info.status == 'unavailable' %}warning{% else %}danger{% endif %} ms-2">
-        {{ info.status }}
-      </span>
-      <small class="d-block text-muted">
-        Última leitura: {{ info.last_read|default:"---" }}
-        {% if info.reason %}<br>Motivo: {{ info.reason }}{% endif %}
-      </small>
+<div class="lt-source-status">
+  <span class="lt-status-indicator {% if info.status == 'ok' or info.status == 'connected' %}ok{% elif info.status == 'unavailable' %}warning{% else %}error{% endif %}"></span>
+  <div>
+    <div class="lt-source-name">{{ info.name|title }}</div>
+    <div class="lt-source-detail">
+      Última leitura: {{ info.last_read|default:"---" }}
+      {% if info.reason %} · {{ info.reason }}{% endif %}
     </div>
   </div>
 </div>
 {% empty %}
-<div class="col-12"><p class="text-muted">Nenhuma fonte configurada.</p></div>
+<div class="lt-empty">Nenhuma fonte configurada.</div>
 {% endfor %}

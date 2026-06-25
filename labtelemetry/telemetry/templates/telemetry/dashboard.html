@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br" data-bs-theme="dark">
 <head>
@@ -5,98 +6,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LabTelemetry — Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{% static 'telemetry/dashboard.css' %}" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" defer></script>
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg lt-navbar">
     <div class="container">
-      <span class="navbar-brand mb-0 h1">LabTelemetry</span>
-      <div>
-        <span class="badge bg-info" id="summary-counts"
-              hx-get="/api/summary/" hx-trigger="every 10s" hx-swap="innerHTML">
-          ---
-        </span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="lt-brand-mark" aria-hidden="true"></span>
+        <div>
+          <span class="navbar-brand mb-0">Lab<span class="brand-accent">Telemetry</span></span>
+          <span class="brand-sub">Industrial Monitoring</span>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span class="badge lt-badge lt-badge-normal" id="summary-counts">---</span>
       </div>
     </div>
   </nav>
 
-  <div class="container">
-    <div class="row mb-3">
-      <div class="col">
-        <h2>Dashboard</h2>
+  <div class="container py-4">
+    <!-- Page Header -->
+    <div class="lt-page-header">
+      <h2>Dashboard</h2>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4" id="summary-cards"
+         hx-get="/dashboard/cards/" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    </div>
+
+    <!-- Main Grid: Chart + Source Status -->
+    <div class="lt-grid-2 mb-4">
+      <!-- Chart Panel -->
+      <div class="lt-panel">
+        <div class="lt-panel-header">
+          <h5 class="lt-panel-title">Leituras (Tempo Real)</h5>
+        </div>
+        <div class="lt-panel-body">
+          <div class="lt-chart-container">
+            <canvas id="readingsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source Status Panel -->
+      <div class="lt-panel">
+        <div class="lt-panel-header">
+          <h5 class="lt-panel-title">Status das Fontes</h5>
+        </div>
+        <div class="lt-panel-body" id="source-health"
+             hx-get="/dashboard/health/" hx-trigger="load, every 15s" hx-swap="innerHTML">
+          <div class="lt-loading"><div class="lt-spinner"></div></div>
+        </div>
       </div>
     </div>
 
-    <div class="row g-3 mb-4" id="summary-cards"
-         hx-get="/dashboard/cards/" hx-trigger="every 10s" hx-swap="innerHTML">
-    </div>
-
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Leituras (Tempo Real)</h5>
-            <div style="position:relative;height:250px;">
-              <canvas id="readingsChart"></canvas>
+    <!-- Tabs: Readings / Alerts / Sensors -->
+    <div class="lt-panel">
+      <div class="lt-panel-header">
+        <ul class="nav lt-tabs" id="dashboardTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="readings-tab" data-bs-toggle="tab"
+                    data-bs-target="#readings" type="button" role="tab">Leituras Recentes</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="alerts-tab" data-bs-toggle="tab"
+                    data-bs-target="#alerts" type="button" role="tab">Alertas Ativos</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sensors-tab" data-bs-toggle="tab"
+                    data-bs-target="#sensors" type="button" role="tab">Sensores</button>
+          </li>
+        </ul>
+      </div>
+      <div class="lt-panel-body">
+        <div class="tab-content" id="dashboardTabContent">
+          <div class="tab-pane fade show active" id="readings" role="tabpanel">
+            <div hx-get="/dashboard/readings/" hx-trigger="load, every 10s" hx-swap="innerHTML">
+              <div class="lt-loading"><div class="lt-spinner"></div></div>
+            </div>
+          </div>
+          <div class="tab-pane fade" id="alerts" role="tabpanel">
+            <div hx-get="/dashboard/alerts/" hx-trigger="load, every 10s" hx-swap="innerHTML">
+              <div class="lt-loading"><div class="lt-spinner"></div></div>
+            </div>
+          </div>
+          <div class="tab-pane fade" id="sensors" role="tabpanel">
+            <div hx-get="/dashboard/sensors/" hx-trigger="load, every 10s" hx-swap="innerHTML">
+              <div class="lt-loading"><div class="lt-spinner"></div></div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="row mb-4" id="source-health"
-         hx-get="/dashboard/health/" hx-trigger="load, every 15s" hx-swap="innerHTML">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Fontes de Dados</h5>
-            <div class="text-center py-2"><div class="spinner-border spinner-border-sm"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <ul class="nav nav-tabs mb-3" id="dashboardTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="readings-tab" data-bs-toggle="tab"
-                data-bs-target="#readings" type="button" role="tab">Leituras Recentes</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="alerts-tab" data-bs-toggle="tab"
-                data-bs-target="#alerts" type="button" role="tab">Alertas Ativos</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="sensors-tab" data-bs-toggle="tab"
-                data-bs-target="#sensors" type="button" role="tab">Sensores</button>
-      </li>
-    </ul>
-
-    <div class="tab-content" id="dashboardTabContent">
-      <div class="tab-pane fade show active" id="readings" role="tabpanel">
-        <div hx-get="/dashboard/readings/" hx-trigger="load, every 10s" hx-swap="innerHTML">
-          <div class="text-center py-4"><div class="spinner-border"></div></div>
-        </div>
-      </div>
-      <div class="tab-pane fade" id="alerts" role="tabpanel">
-        <div hx-get="/dashboard/alerts/" hx-trigger="load, every 10s" hx-swap="innerHTML">
-          <div class="text-center py-4"><div class="spinner-border"></div></div>
-        </div>
-      </div>
-      <div class="tab-pane fade" id="sensors" role="tabpanel">
-        <div hx-get="/dashboard/sensors/" hx-trigger="load, every 10s" hx-swap="innerHTML">
-          <div class="text-center py-4"><div class="spinner-border"></div></div>
-        </div>
-      </div>
-    </div>
   </div>
+
   <script>
   document.addEventListener('DOMContentLoaded', function() {
+    // Summary badge updater
+    function updateSummaryBadge() {
+      fetch('/api/summary/')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          document.getElementById('summary-counts').textContent =
+            d.total_sensors + ' sensores · ' + d.total_readings + ' leituras · ' + d.active_alerts + ' alertas';
+        })
+        .catch(function() {});
+    }
+    updateSummaryBadge();
+    setInterval(updateSummaryBadge, 10000);
+
     const COLORS = [
-      '#0d6efd','#dc3545','#198754','#ffc107','#6f42c1',
-      '#fd7e14','#20c997','#e83e8c','#17a2b8','#6610f2'
+      '#06b6d4','#3b82f6','#10b981','#f59e0b','#8b5cf6',
+      '#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'
     ];
     let chartInstance = null;
 
@@ -115,9 +142,12 @@
               label: e[0],
               data: e[1],
               borderColor: COLORS[i % COLORS.length],
-              backgroundColor: COLORS[i % COLORS.length] + '22',
-              tension: 0.2,
-              pointRadius: 3
+              backgroundColor: COLORS[i % COLORS.length] + '15',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              fill: true
             };
           });
 
@@ -129,13 +159,38 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              },
               scales: {
-                x: { type: 'time', time: { tooltipFormat: 'dd/MM HH:mm' }, title: { display: true, text: 'Tempo' } },
-                y: { beginAtZero: false, title: { display: true, text: 'Valor' } }
+                x: {
+                  type: 'time',
+                  time: { tooltipFormat: 'dd/MM HH:mm' },
+                  grid: { color: '#1e293b' },
+                  ticks: { color: '#64748b' }
+                },
+                y: {
+                  beginAtZero: false,
+                  grid: { color: '#1e293b' },
+                  ticks: { color: '#64748b' }
+                }
               },
               plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2); } } }
+                legend: {
+                  position: 'top',
+                  labels: { color: '#94a3b8', usePointStyle: true, padding: 16 }
+                },
+                tooltip: {
+                  backgroundColor: '#1a2332',
+                  titleColor: '#e2e8f0',
+                  bodyColor: '#94a3b8',
+                  borderColor: '#1e293b',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2); }
+                  }
+                }
               }
             }
           });
