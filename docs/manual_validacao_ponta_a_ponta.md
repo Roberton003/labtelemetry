@@ -22,7 +22,7 @@ Use 3 terminais.
 ### Terminal A - Infraestrutura
 
 ```bash
-cd "/media/Arquivos/Engenharia dados IOT 2026/labtelemetry"
+cd /caminho/para/labtelemetry   # raiz do repositorio clonado
 docker compose up -d
 ```
 
@@ -34,7 +34,7 @@ Resultado esperado:
 ### Terminal B - Banco E Aplicacao
 
 ```bash
-cd "/media/Arquivos/Engenharia dados IOT 2026/labtelemetry"
+cd /caminho/para/labtelemetry   # raiz do repositorio clonado
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 .venv/bin/python labtelemetry/manage.py migrate
 .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
@@ -48,7 +48,7 @@ Resultado esperado:
 ### Terminal C - Dados E Verificacao
 
 ```bash
-cd "/media/Arquivos/Engenharia dados IOT 2026/labtelemetry"
+cd /caminho/para/labtelemetry   # raiz do repositorio clonado
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
 curl -sS "http://127.0.0.1:8000/api/summary/"
@@ -94,7 +94,7 @@ Resultado esperado:
 Em um quarto terminal ou reaproveitando o Terminal B:
 
 ```bash
-cd "/media/Arquivos/Engenharia dados IOT 2026/labtelemetry"
+cd /caminho/para/labtelemetry   # raiz do repositorio clonado
 export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 export OTEL_ENABLED=True
 .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000

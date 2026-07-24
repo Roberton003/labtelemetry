@@ -1,152 +1,237 @@
-# LabTelemetry
+<div align="center">
 
-<p align="center">
-  <img src="docs/assets/labtelemetry_hero_banner.png" alt="LabTelemetry banner" width="100%">
-</p>
+# 🧪 LabTelemetry
 
-<p align="center">
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white">
-  <img alt="Django 5" src="https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white">
-  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
-  <img alt="OpenTelemetry" src="https://img.shields.io/badge/OpenTelemetry-4B9CD3?style=for-the-badge&logo=opentelemetry&logoColor=white">
-  <img alt="Jaeger" src="https://img.shields.io/badge/Jaeger-66CFE3?style=for-the-badge&logo=jaeger&logoColor=white">
-  <img alt="HTMX" src="https://img.shields.io/badge/HTMX-3366CC?style=for-the-badge&logo=htmx&logoColor=white">
-  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white">
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
-</p>
+[![CI](https://github.com/Roberton003/labtelemetry/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Roberton003/labtelemetry/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-5.2-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-24%2B-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-4B9CD3?style=for-the-badge&logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-<p align="center">
-  Reproducible OT/IT telemetry lab with simulation, quality rules, JSON API, dashboard, and local observability.
-</p>
+<img src="docs/assets/labtelemetry_hero_banner.png" alt="LabTelemetry" width="100%">
 
-## Overview
+<p align="center"><b>Laboratório de telemetria OT/IT reproduzível: ingestão industrial (Modbus TCP, OPC-UA, simulador determinístico), regras de qualidade de processo, API JSON e dashboard operacional.</b></p>
 
-LabTelemetry is a Django project built to demonstrate a complete telemetry path without inflating the stack beyond what the use case needs.
+</div>
 
-```text
-simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API -> dashboard
+---
+
+## 📌 Project Highlights
+
+- **Idempotência garantida pelo banco, não pela aplicação.** A deduplicação vem de `UniqueConstraint(sensor, timestamp)` combinada com `bulk_create(ignore_conflicts=True)` — uma checagem por lote dentro do Postgres, em vez de um `SELECT` por amostra vindo do Python. O guardrail tem [teste negativo](labtelemetry/telemetry/test_ingest_telemetry.py): sem o mecanismo, o replay estoura `IntegrityError`.
+- **Fontes OT plugáveis atrás de uma única ABC.** `TelemetrySource` define `read()`/`health()`/`close()`; Modbus TCP, OPC-UA e simulador são intercambiáveis para o pipeline. Adicionar um protocolo não toca o código de ingestão.
+- **Simulador determinístico por seed.** Reproduzir uma sequência de falha é `--seed 42`, não "esperar o sensor falhar de novo" — o que torna o teste das regras de qualidade repetível.
+- **Observabilidade opcional em runtime.** OpenTelemetry é ligado por `OTEL_ENABLED`; desligado, o custo é zero e nenhuma dependência de trace entra no caminho da request.
+- **Qualidade de processo separada da persistência.** `evaluate_reading()` é pura (sem I/O), o que permite avaliar o lote inteiro em memória antes de um único INSERT.
+- **Degradação explícita, não silenciosa.** Se `pymodbus` não está instalado ou o CLP está fora do ar, `/api/health/sources/` reporta `disconnected` — a fonte não some do inventário.
+
+---
+
+## 🏛️ Architecture & Tech Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Aquisição OT | Modbus TCP (`pymodbus`), OPC-UA (`asyncua`), simulador determinístico |
+| Ingestão | Django management command (`ingest_telemetry`), lote com `bulk_create` |
+| Qualidade | Regras de limite de processo e detecção de drift (`telemetry/quality.py`) |
+| Persistência | PostgreSQL 16 (Docker Compose); SQLite como fallback local |
+| Backend | Django 5.2 / Python 3.12 |
+| API | Endpoints JSON server-side, sem framework REST adicional |
+| Frontend | Django Templates + HTMX + Chart.js |
+| Observabilidade | OpenTelemetry → Jaeger (opt-in via `OTEL_ENABLED`) |
+| Runtime | Docker + Gunicorn |
+| Qualidade de código | ruff, 73 testes Django, CI no GitHub Actions |
+
+---
+
+## 🗺️ Architecture Diagram
+
+```mermaid
+flowchart LR
+    subgraph OT["Camada OT"]
+        MB["Modbus TCP<br/>(CLP / RTU)"]
+        UA["OPC-UA<br/>(servidor)"]
+        SIM["Simulador<br/>(seed determinístico)"]
+    end
+
+    subgraph ING["Ingestão"]
+        ADP["TelemetrySource (ABC)<br/>read / health / close"]
+        QA["evaluate_reading()<br/>limites + drift"]
+        BULK["bulk_create<br/>ignore_conflicts"]
+    end
+
+    subgraph IT["Camada IT"]
+        DB[("PostgreSQL 16<br/>UniqueConstraint<br/>sensor + timestamp")]
+        API["API JSON<br/>/api/..."]
+        DASH["Dashboard<br/>HTMX + Chart.js"]
+        ALERT["TelemetryAlert<br/>raise_alert idempotente"]
+    end
+
+    OTEL(["OpenTelemetry → Jaeger<br/>opt-in"])
+
+    MB --> ADP
+    UA --> ADP
+    SIM --> ADP
+    ADP --> QA --> BULK --> DB
+    QA --> ALERT --> DB
+    DB --> API --> DASH
+    API -.-> OTEL
 ```
 
-## Platform Snapshot
+---
 
-| Area | Current State |
-|---|---|
-| Domain | Industrial telemetry lab for pH, turbidity, and TOC |
-| Ingestion | Deterministic simulator plus Modbus TCP and OPC-UA adapters |
-| Storage | PostgreSQL 16 via Docker Compose, SQLite fallback for local-only runs |
-| Backend | Django 5.2.9 |
-| Frontend | Server-rendered dashboard with HTMX and Chart.js |
-| Observability | OpenTelemetry with Jaeger, optional at runtime |
-| Data Quality | Threshold rules, drift warning, active alerts |
-| Validation | Django tests, API checks, end-to-end local manual |
-
-## What You Can Validate Today
-
-- Reproducible local ingestion from a controlled simulator
-- Persistent telemetry readings with source lineage
-- JSON endpoints under `/api/...`
-- Operational dashboard rendered by Django
-- Source health checks for simulator, Modbus, and OPC-UA
-- Optional traces in Jaeger
-
-## Dashboard
+## 📊 O Dashboard
 
 <p align="center">
-  <img src="docs/assets/dashboard_mockup.png" alt="LabTelemetry dashboard mockup" width="90%">
+  <img src="docs/assets/dashboard_mockup.png" alt="Dashboard LabTelemetry" width="90%">
 </p>
 
-The user interface is built with Django templates, HTMX, and Chart.js.
+Renderizado pelo Django, atualizado por HTMX em fragmentos parciais (cards, leituras, alertas, sensores, saúde das fontes) — sem SPA e sem build step de frontend.
 
-## Documentation Map
+### Endpoints da API
 
-| Document | Purpose |
+| Endpoint | Retorno |
 |---|---|
-| [docs/overview.md](docs/overview.md) | Project scope and public positioning |
-| [docs/architecture.md](docs/architecture.md) | Runtime structure and component boundaries |
-| [docs/api.md](docs/api.md) | API endpoints and public contract notes |
-| [docs/operations.md](docs/operations.md) | Local setup and operational commands |
-| [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md) | Full end-to-end validation in parallel terminals |
-| [docs/data-model.md](docs/data-model.md) | Operational data model and database schemas |
-| [docs/data-contract.md](docs/data-contract.md) | Public API and data contract definition |
-| [docs/replay-idempotency.md](docs/replay-idempotency.md) | Replay, deduplication, and idempotency behavior |
-| [docs/security.md](docs/security.md) | Public documentation boundary and secret handling |
+| `GET /api/summary/` | Contagens agregadas e timestamp da última leitura |
+| `GET /api/sensors/` | Inventário de sensores com fator de calibração |
+| `GET /api/readings/recent/` | Últimas leituras (`?limit=`, teto de 500) |
+| `GET /api/sensors/<id>/readings/` | Série temporal de um sensor |
+| `GET /api/alerts/active/` | Alertas operacionais ativos |
+| `GET /api/health/sources/` | Estado de conexão de cada fonte OT |
 
-## Quick Start
+Contrato completo em [docs/data-contract.md](docs/data-contract.md).
 
-### Bootstrap Environment
+---
+
+## 🚀 Quick Start & Setup
+
+**Pré-requisitos:** Python 3.12+, Docker Compose.
+
+### Subir tudo com Docker
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/Roberton003/labtelemetry.git
+cd labtelemetry
+cp .env.example .env
+docker compose up --build -d
+```
+
+Dashboard em http://127.0.0.1:8000/ · Jaeger em http://localhost:16686
+
+### Rodar localmente (SQLite, sem Docker)
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-docker compose up -d
-```
 
-### Migrate and Run
-
-```bash
-export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 python labtelemetry/manage.py migrate
 python labtelemetry/manage.py runserver 127.0.0.1:8000
 ```
 
-### Generate Telemetry
+### Gerar telemetria
 
 ```bash
-python labtelemetry/manage.py ingest_telemetry --source simulator --once
+# Uma leitura de cada sensor, a partir do simulador determinístico
+python labtelemetry/manage.py ingest_telemetry --source simulator --once --sim-count 3
+
+# Loop contínuo a cada 5s (Ctrl+C encerra de forma limpa)
+python labtelemetry/manage.py ingest_telemetry --source simulator --interval 5
+
+# Fonte industrial real
+python labtelemetry/manage.py ingest_telemetry --source modbus --modbus-host 192.168.0.10
+
 curl -s http://127.0.0.1:8000/api/summary/
 ```
 
-Open locally:
-
-- Dashboard: http://127.0.0.1:8000/
-- Admin: http://127.0.0.1:8000/admin/
-- Jaeger: http://127.0.0.1:16686
-
-## Observability
-
-Tracing is disabled by default:
+### Validar
 
 ```bash
-OTEL_ENABLED=False
+python labtelemetry/manage.py test telemetry   # 73 testes
+ruff check labtelemetry/
 ```
 
-To validate traces locally:
+Roteiro completo em [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md).
 
-```bash
-export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
-OTEL_ENABLED=True .venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
-curl -s http://127.0.0.1:8000/api/summary/
-curl -s "http://localhost:16686/api/traces?service=labtelemetry&limit=5"
+---
+
+## ⚙️ Environment Variables
+
+Todas em `.env` (ver [.env.example](.env.example)):
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `SECRET_KEY` | chave de dev | Chave criptográfica do Django — **trocar fora de dev** |
+| `DEBUG` | `True` | Modo debug |
+| `ALLOWED_HOSTS` | `127.0.0.1,localhost` | Hosts aceitos, separados por vírgula |
+| `DATABASE_URL` | `sqlite:///db.sqlite3` | Conexão via `dj-database-url`; aceita `postgres://...` |
+| `OTEL_ENABLED` | `False` | Liga a instrumentação OpenTelemetry |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | Coletor OTLP (Jaeger) |
+| `OTEL_SERVICE_NAME` | `labtelemetry` | Nome do serviço nos traces |
+
+---
+
+## 📚 Documentation Resources
+
+| Documento | Conteúdo |
+|---|---|
+| [docs/overview.md](docs/overview.md) | Escopo do projeto e posicionamento |
+| [docs/architecture.md](docs/architecture.md) | Estrutura de runtime e fronteiras entre componentes |
+| [docs/api.md](docs/api.md) | Endpoints e contrato público |
+| [docs/data-model.md](docs/data-model.md) | Modelo de dados operacional |
+| [docs/data-contract.md](docs/data-contract.md) | Contrato de dados, garantias e limitações |
+| [docs/replay-idempotency.md](docs/replay-idempotency.md) | O que é garantido no replay — e o que não é |
+| [docs/operations.md](docs/operations.md) | Setup e comandos operacionais |
+| [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md) | Validação end-to-end em terminais paralelos |
+| [docs/security.md](docs/security.md) | Fronteira de documentação pública e tratamento de segredos |
+| [sql/analytics/](sql/analytics/) | Consultas de frescor, volume e taxa de anomalia |
+
+Aprofundamento na [Wiki do projeto](https://github.com/Roberton003/labtelemetry/wiki).
+
+---
+
+## 🌳 Estrutura do Projeto
+
+```text
+labtelemetry/
+├── labtelemetry/               # Projeto Django
+│   ├── labtelemetry/           # settings, urls, wsgi/asgi (OTel condicional)
+│   └── telemetry/              # App único de domínio
+│       ├── models.py           # Sensor, Reading (UniqueConstraint), Alert
+│       ├── quality.py          # Regras de limite, drift e alerta idempotente
+│       ├── views.py            # API JSON + fragmentos HTMX do dashboard
+│       ├── sources/            # Adapters OT sob a ABC TelemetrySource
+│       │   ├── base.py         # TelemetrySource, TelemetrySample
+│       │   ├── modbus.py       # Modbus TCP via pymodbus
+│       │   ├── opcua.py        # OPC-UA via asyncua (+ servidor de teste)
+│       │   └── simulator.py    # Gerador gaussiano determinístico
+│       ├── management/commands/
+│       │   ├── ingest_telemetry.py   # Runner: fonte → qualidade → lote
+│       │   └── simulate_telemetry.py # Gerador de cenário sintético
+│       ├── templates/telemetry/      # Dashboard + parciais HTMX
+│       └── test_*.py, tests.py       # 73 testes
+├── docs/                       # Documentação pública + wiki-seed
+├── sql/analytics/              # Consultas operacionais
+├── .github/workflows/ci.yml    # ruff + testes com Postgres 16
+├── docker-compose.yml          # app + postgres + jaeger
+└── Dockerfile                  # Runtime Gunicorn
 ```
 
-## Validation
+---
 
-### Fast Sanity
+## 🎯 Escopo e Fronteiras
 
-```bash
-.venv/bin/python labtelemetry/manage.py check
-.venv/bin/python labtelemetry/manage.py makemigrations --check --dry-run
-.venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1
-```
+Este repositório é deliberadamente um laboratório local, não uma plataforma de produção generalizada. O que está fora de escopo está fora por decisão, não por omissão:
 
-### Full Practical Flow
+- Processamento de stream distribuído
+- Autenticação de produção na API
+- Infraestrutura cloud multi-região
+- Garantia formal de *exactly-once* — o comportamento real e seus limites estão em [replay-idempotency.md](docs/replay-idempotency.md)
 
-Use [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md) for the parallel-terminal walkthrough.
+---
 
-## Boundaries
+## 📄 License
 
-This repository is intentionally scoped as a local lab and portfolio-grade system, not a generalized production platform.
-
-Out of current public scope:
-
-- distributed stream processing
-- production authentication
-- multi-region cloud infrastructure
-
-## Wiki
-
-The project wiki is available at:
-
-- https://github.com/Roberton003/labtelemetry/wiki
+[MIT](LICENSE) © 2026 Roberto Nascimento

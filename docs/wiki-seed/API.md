@@ -1,40 +1,52 @@
-[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+[[Home]] | [[Overview]] | [[Architecture]] | [[Idempotencia-e-Replay]] | [[API]] | [[Operations]] | [[Validation-Guide]]
 
-# API
+# 🔗 API
 
-All JSON endpoints are served under `/api/`.
+Todos os endpoints JSON são servidos sob `/api/`. São somente leitura — a escrita acontece pelos comandos de ingestão.
 
-## Endpoints
+---
 
-| Method | Path | Purpose |
+## 📍 Endpoints
+
+| Método | Rota | Função |
 |---|---|---|
-| GET | `/api/sensors/` | List sensors |
-| GET | `/api/readings/recent/?limit=50` | Return recent readings |
-| GET | `/api/sensors/<id>/readings/?limit=100` | Return readings for one sensor |
-| GET | `/api/alerts/active/` | Return active alerts |
-| GET | `/api/summary/` | Return operational summary |
-| GET | `/api/health/sources/` | Return telemetry source status |
+| GET | `/api/summary/` | Resumo operacional: contagens e última leitura |
+| GET | `/api/sensors/` | Inventário de sensores |
+| GET | `/api/readings/recent/?limit=50` | Leituras recentes (teto de 500) |
+| GET | `/api/sensors/<id>/readings/?limit=100` | Série temporal de um sensor (teto de 500) |
+| GET | `/api/alerts/active/` | Alertas ativos |
+| GET | `/api/health/sources/` | Estado de conexão de cada fonte OT |
 
-## Notes
+---
 
-- Reading payloads include `source`, a short lineage field such as `simulator:seed=42` or `modbus:host:port`
-- Legacy bare API routes without `/api/` are not part of the public contract
-- The source health endpoint is operational metadata; it does not replace a live Modbus connectivity test
+## 📦 Formato do Payload
 
-## Payload Shape
+**Leitura:** `sensor_name`, `parameter`, `timestamp`, `raw_value`, `calibrated_value`, `source`, `status`.
 
-The recent readings endpoint returns a compact operational payload:
+**Por que bruto e calibrado juntos:** o valor calibrado é o que o processo enxerga; o bruto é o que o sensor mandou. A divergência entre os dois é o que a detecção de drift observa — descartar o bruto tornaria a regra inauditável depois do fato.
 
-- `sensor_name`
-- `parameter`
-- `raw_value`
-- `calibrated_value`
-- `source`
-- `status`
+**Campo `source`:** lineage curto (`simulator:seed=42`, `modbus:host:port`), suficiente para rastrear a origem em consulta sem carregar o payload do protocolo.
 
-## Example
+---
+
+## 🚦 Exemplo
 
 ```bash
 curl -s http://127.0.0.1:8000/api/summary/
+# {"total_sensors": 6, "total_readings": 10, "active_alerts": 0,
+#  "last_reading_timestamp": "2026-07-24T23:07:23.761Z"}
+
 curl -s http://127.0.0.1:8000/api/health/sources/
+# {"simulator": {"name": "simulator:seed=42", "status": "ok", ...},
+#  "modbus": {"name": "modbus:127.0.0.1:502", "status": "disconnected", ...}}
 ```
+
+---
+
+## ⚠️ Fora do Contrato
+
+- **Rotas antigas sem o prefixo `/api/`** não fazem parte do contrato público.
+- **`/api/health/sources/` é metadado operacional**, não teste de conectividade ao vivo — reporta o último estado conhecido do adapter, não abre uma conexão Modbus a cada request.
+- **Não há SLO público de latência.**
+
+Contrato formal e regras de versionamento em [docs/data-contract.md](https://github.com/Roberton003/labtelemetry/blob/master/docs/data-contract.md).

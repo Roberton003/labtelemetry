@@ -1,8 +1,10 @@
-[[Home]] | [[Overview]] | [[Architecture]] | [[API]] | [[Operations]] | [[Validation-Guide]]
+[[Home]] | [[Overview]] | [[Architecture]] | [[Idempotencia-e-Replay]] | [[API]] | [[Operations]] | [[Validation-Guide]]
 
-# Operations
+# 🚀 Operações
 
-## Local Setup
+---
+
+## 📦 Setup Local
 
 ```bash
 python3 -m venv .venv
@@ -12,40 +14,75 @@ docker compose up -d
 .venv/bin/python labtelemetry/manage.py migrate
 ```
 
-## Run The Application
+**Nota sobre o banco:** sem `DATABASE_URL` definida, o projeto cai em SQLite — útil para inspeção rápida, mas o CI e o Compose rodam em PostgreSQL 16. Para apontar ao Postgres local:
 
 ```bash
-.venv/bin/python labtelemetry/manage.py runserver
+export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/labtelemetry"
 ```
 
-Open:
+---
 
-- Dashboard: `http://127.0.0.1:8000/`
-- Admin: `http://127.0.0.1:8000/admin/`
-- Jaeger: `http://127.0.0.1:16686`
-
-## Generate Telemetry
+## ▶️ Executar a Aplicação
 
 ```bash
-.venv/bin/python labtelemetry/manage.py simulate_telemetry --once --seed 42 --sensors 6
-.venv/bin/python labtelemetry/manage.py simulate_telemetry --seed 42 --iterations 50
-.venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
+.venv/bin/python labtelemetry/manage.py runserver 127.0.0.1:8000
 ```
 
-## What The UI Shows
+| Serviço | Endereço |
+|---|---|
+| Dashboard | http://127.0.0.1:8000/ |
+| Admin | http://127.0.0.1:8000/admin/ |
+| Jaeger | http://127.0.0.1:16686 |
 
-- summary cards
-- source health
-- recent readings
-- active alerts
-- sensor list
+---
 
-## Validation
+## 📡 Gerar Telemetria
+
+**Simulador (reproduzível):**
+
+```bash
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once --sim-count 3
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --interval 5
+```
+
+**Modbus TCP (fonte real):**
+
+```bash
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source modbus \
+  --modbus-host 192.168.0.10 --modbus-port 502 --modbus-unit 1
+```
+
+**Cenário sintético com anomalias:**
+
+```bash
+.venv/bin/python labtelemetry/manage.py simulate_telemetry --seed 42 --iterations 50 --anomaly-rate 0.3
+```
+
+**Diferença entre os dois comandos:** `ingest_telemetry` é o runner de produção — lê de uma fonte real via adapter. `simulate_telemetry` gera cenário direto no banco, para exercitar as regras de qualidade sem depender de fonte externa.
+
+**Sobre reexecução:** rodar `ingest_telemetry` duas vezes sobre a mesma janela é no-op; rodar `simulate_telemetry` duas vezes gera linhas novas. O porquê está em [[Idempotencia-e-Replay]].
+
+---
+
+## 🖥️ O Que a Interface Mostra
+
+- cards de resumo
+- saúde das fontes
+- leituras recentes
+- alertas ativos
+- lista de sensores
+
+Todos atualizados por HTMX em fragmentos parciais independentes.
+
+---
+
+## ✅ Checagens de Sanidade
 
 ```bash
 .venv/bin/python labtelemetry/manage.py check
 .venv/bin/python labtelemetry/manage.py makemigrations --check --dry-run
-.venv/bin/python labtelemetry/manage.py test telemetry --verbosity=1
+.venv/bin/python labtelemetry/manage.py test telemetry
+.venv/bin/ruff check labtelemetry/
 ```
 
-For a full parallel terminal validation flow, see [[Validation-Guide]].
+As mesmas quatro checagens rodam no CI a cada push e pull request. Para o fluxo completo em terminais paralelos, ver [[Validation-Guide]].
