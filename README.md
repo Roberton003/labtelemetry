@@ -32,7 +32,7 @@ simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API ->
 | Area | Current State |
 |---|---|
 | Domain | Industrial telemetry lab for pH, turbidity, and TOC |
-| Ingestion | Deterministic simulator plus Modbus TCP adapter surface |
+| Ingestion | Deterministic simulator plus Modbus TCP and OPC-UA adapters |
 | Storage | PostgreSQL 16 via Docker Compose, SQLite fallback for local-only runs |
 | Backend | Django 5.2.9 |
 | Frontend | Server-rendered dashboard with HTMX and Chart.js |
@@ -46,7 +46,7 @@ simulator -> ingestion -> quality evaluation -> PostgreSQL/SQLite -> JSON API ->
 - Persistent telemetry readings with source lineage
 - JSON endpoints under `/api/...`
 - Operational dashboard rendered by Django
-- Source health checks for simulator and Modbus
+- Source health checks for simulator, Modbus, and OPC-UA
 - Optional traces in Jaeger
 
 ## Dashboard

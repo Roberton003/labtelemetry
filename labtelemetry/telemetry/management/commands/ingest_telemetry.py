@@ -1,7 +1,6 @@
 import logging
 import signal
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from django.core.management.base import BaseCommand
 
@@ -22,9 +21,15 @@ class Command(BaseCommand):
     help = "Ingest telemetry from external sources (Modbus TCP / Simulator)"
 
     def add_arguments(self, parser):
-        parser.add_argument("--source", default="simulator", choices=["modbus", "simulator"])
-        parser.add_argument("--interval", type=float, default=5.0, help="Seconds between reads")
-        parser.add_argument("--batch-size", type=int, default=10, help="Max samples per read")
+        parser.add_argument(
+            "--source", default="simulator", choices=["modbus", "simulator"]
+        )
+        parser.add_argument(
+            "--interval", type=float, default=5.0, help="Seconds between reads"
+        )
+        parser.add_argument(
+            "--batch-size", type=int, default=10, help="Max samples per read"
+        )
 
         # Modbus args
         parser.add_argument("--modbus-host", default="127.0.0.1")
@@ -58,7 +63,9 @@ class Command(BaseCommand):
         total_samples = 0
         total_readings = 0
 
-        self.stdout.write(f"Source: {source.name}, interval={interval}s, batch_size={batch_size}")
+        self.stdout.write(
+            f"Source: {source.name}, interval={interval}s, batch_size={batch_size}"
+        )
 
         try:
             while not _shutdown_requested:
@@ -66,11 +73,17 @@ class Command(BaseCommand):
                 if not samples:
                     self.stdout.write(f"[{iteration}] No samples from {source.name}")
                 else:
+                    batch: list[TelemetryReading] = []
                     for sample in samples[:batch_size]:
                         reading = self._sample_to_reading(sample)
                         if reading is not None:
                             evaluate_and_alert(reading)
+                            batch.append(reading)
                             total_readings += 1
+                    if batch:
+                        TelemetryReading.objects.bulk_create(
+                            batch, ignore_conflicts=True
+                        )
                     total_samples += len(samples)
                     self.stdout.write(
                         f"[{iteration}] Read {len(samples)} samples, "
@@ -82,6 +95,7 @@ class Command(BaseCommand):
                     break
                 if not _shutdown_requested:
                     import time
+
                     time.sleep(interval)
 
             health = source.health()
@@ -107,7 +121,9 @@ class Command(BaseCommand):
             )
             adapter.connect()
             if not adapter._connected:
-                self.stdout.write(self.style.WARNING("Modbus not connected, use --source simulator"))
+                self.stdout.write(
+                    self.style.WARNING("Modbus not connected, use --source simulator")
+                )
             return adapter
 
         if source_type == "simulator":
@@ -128,12 +144,15 @@ class Command(BaseCommand):
             logger.warning("Sensor %d not found, skipping", sample.sensor_id)
             return None
 
-        timestamp = sample.timestamp or datetime.now(timezone.utc)
+        timestamp = sample.timestamp or datetime.now(UTC)
+
+        raw_val = round(sample.value, 4)
+        calibrated_val = round(raw_val * sensor.calibration_factor, 4)
 
         return TelemetryReading(
             sensor=sensor,
             timestamp=timestamp,
-            raw_value=round(sample.value, 4),
-            calibrated_value=round(sample.value, 4),
+            raw_value=raw_val,
+            calibrated_value=calibrated_val,
             source=sample.source[:100],
         )

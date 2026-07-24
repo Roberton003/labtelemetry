@@ -133,12 +133,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if os.environ.get('OTEL_ENABLED', 'False').strip().lower() in ('true', '1', 'yes'):
     try:
         from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
+        from opentelemetry.instrumentation.django import DjangoInstrumentor
+        from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.instrumentation.django import DjangoInstrumentor
-        from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 
         _resource = Resource.create({
             "service.name": os.environ.get('OTEL_SERVICE_NAME', 'labtelemetry'),

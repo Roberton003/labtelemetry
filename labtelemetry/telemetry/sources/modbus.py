@@ -1,6 +1,5 @@
 import logging
-import socket
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from telemetry.sources.base import TelemetrySample, TelemetrySource
 
@@ -70,7 +69,7 @@ class ModbusTCPAdapter(TelemetrySource):
                 logger.warning("Modbus read error: %s", result)
                 return []
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             self._last_read = now
             samples: list[TelemetrySample] = []
 
@@ -91,7 +90,7 @@ class ModbusTCPAdapter(TelemetrySource):
 
             return samples
 
-        except socket.timeout:
+        except TimeoutError:
             logger.warning("Modbus read timed out")
             return []
         except Exception as exc:

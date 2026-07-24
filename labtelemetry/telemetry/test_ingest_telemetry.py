@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 from unittest import mock
 
@@ -54,7 +54,7 @@ class _FakeModbusAdapter:
     def read(self):
         if not self._connected:
             return []
-        self._last_read = datetime.now(timezone.utc)
+        self._last_read = datetime.now(UTC)
         return [
             TelemetrySample(
                 sensor_id=1,
@@ -94,7 +94,7 @@ class IngestTelemetryCommandTest(TestCase):
                     sensor_id=self.sensor_ph.id,
                     parameter=self.sensor_ph.parameter,
                     value=7.0,
-                    timestamp=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+                    timestamp=datetime(2026, 6, 23, 12, 0, tzinfo=UTC),
                     source="stub:simulator",
                     raw_payload={"value": 7.0},
                 ),
@@ -102,7 +102,7 @@ class IngestTelemetryCommandTest(TestCase):
                     sensor_id=self.sensor_turb.id,
                     parameter=self.sensor_turb.parameter,
                     value=6.5,
-                    timestamp=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+                    timestamp=datetime(2026, 6, 23, 12, 0, tzinfo=UTC),
                     source="stub:simulator",
                     raw_payload={"value": 6.5},
                 ),

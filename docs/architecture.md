@@ -16,9 +16,8 @@ Telemetry source
 - `telemetry.models`: sensor, reading, and alert persistence models.
 - `telemetry.quality`: threshold and drift evaluation rules.
 - `telemetry.management.commands.simulate_telemetry`: deterministic telemetry simulation.
-- `telemetry.management.commands.telemetry_simulate`: operational wrapper for repeated simulation.
 - `telemetry.management.commands.ingest_telemetry`: source-based ingestion command.
-- `telemetry.sources`: source adapter abstraction for simulator and Modbus TCP.
+- `telemetry.sources`: source adapter abstraction for simulator, Modbus TCP, and OPC-UA.
 - `telemetry.views`: dashboard and JSON API views.
 
 ## Data Model
@@ -37,5 +36,6 @@ The current adapters are:
 
 - `SimulatorAdapter`: uses the existing simulator path for reproducible local runs.
 - `ModbusTCPAdapter`: provides a Modbus TCP adapter surface with configurable host, port, unit id, and timeout.
+- `OpcUaAdapter`: connects to OPC-UA servers to read telemetry node variables.
 
-The simulator remains the default reproducible path. Real Modbus validation depends on an available device or simulator.
+The simulator remains the default reproducible path. Real Modbus and OPC-UA validation depend on an available device or simulator.

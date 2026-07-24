@@ -18,7 +18,6 @@ Telemetry source
 - `telemetry.models`: sensor, reading, and alert persistence models
 - `telemetry.quality`: threshold and drift evaluation rules
 - `telemetry.management.commands.simulate_telemetry`: deterministic telemetry simulation
-- `telemetry.management.commands.telemetry_simulate`: operational wrapper for repeated simulation
 - `telemetry.management.commands.ingest_telemetry`: source-based ingestion command
 - `telemetry.sources`: source adapter abstraction for simulator and Modbus TCP
 - `telemetry.views`: dashboard and JSON API views

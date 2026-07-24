@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import TelemetrySensor, TelemetryReading, TelemetryAlert
+
+from .models import TelemetryAlert, TelemetryReading, TelemetrySensor
+
 
 @admin.register(TelemetrySensor)
 class TelemetrySensorAdmin(admin.ModelAdmin):

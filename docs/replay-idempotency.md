@@ -19,7 +19,7 @@ Cada execução do comando `ingest_telemetry --once`:
 executado duas vezes com o mesmo seed, serão criados registros duplicados
 (com `id` diferente, mesmo `timestamp` e `raw_value`).
 
-### Simulação (`telemetry_simulate --seed 42 --count N`)
+### Simulação (`simulate_telemetry --seed 42 --iterations N`)
 
 Usa `seed` para gerar a mesma sequência de leituras, mas **não verifica**
 se aquelas leituras já existem. Cada execução insere N novos registros.
@@ -30,10 +30,10 @@ se aquelas leituras já existem. Cada execução insere N novos registros.
 
 ```bash
 # Primeira execução — gera 10 leituras
-telemetry_simulate --seed 42 --count 10 --anomaly-rate 0.3
+simulate_telemetry --seed 42 --iterations 10 --anomaly-rate 0.3
 
 # Segunda execução — gera OUTRAS 10 leituras (mesmo seed, mesmo valor)
-telemetry_simulate --seed 42 --count 10 --anomaly-rate 0.3
+simulate_telemetry --seed 42 --iterations 10 --anomaly-rate 0.3
 # Resultado: 20 leituras no banco, as 10 primeiras duplicadas em valor
 ```
 
@@ -51,10 +51,13 @@ cria leituras "novas" com timestamp = agora.
 duplicatas. A chave primária é `id` (auto-increment), que por definição
 nunca colide.
 
-### O que impediria deduplicar hoje
+### O que impede deduplicação total hoje
 
-- `TelemetryReading` não tem `(sensor_id, timestamp, raw_value)` como
-  unique constraint
+- `TelemetryReading` tem `UniqueConstraint(sensor, timestamp)`, o que
+  impede duas leituras do mesmo sensor no mesmo instante, mas
+  **não cobre** `raw_value` — leituras com mesmo sensor+timestamp mas
+  valores diferentes ainda colidem (embora na prática isso dependa da
+  precisão do timestamp)
 - Django ORM não suporta `INSERT ... ON CONFLICT` sem raw SQL ou
   `get_or_create` (que adiciona SELECT antes de INSERT)
 - Não há hash de payload ou identificador de fonte externa
@@ -69,8 +72,9 @@ idempotentes por construção:**
 | `quality.py: evaluate_and_alert()` | ✅ Sim | Se alerta ativo já existe para o mesmo problema, não recria |
 | `GET /api/...` | ✅ Sim | REST GET é naturalmente idempotente |
 | `migrate` | ✅ Sim | Django migrations são idempotentes |
-| `ingest_telemetry --once` | ❌ Não | Cada execução cria novas leituras |
-| `telemetry_simulate` | ❌ Não | Cada execução cria novas leituras |
+| `UniqueConstraint(sensor, timestamp)` | ✅ Sim (parcial) | Impede duplicata exata mesmo sensor+timestamp; não cobre valores diferentes |
+| `ingest_telemetry --once` | ❌ Não | Cada execução cria novas leituras (timestamps mudam) |
+| `simulate_telemetry` | ❌ Não | Cada execução cria novas leituras (timestamps mudam) |
 
 ## O Que Mudaria para Idempotência Formal
 

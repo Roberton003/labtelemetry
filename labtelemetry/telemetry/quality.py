@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
+from telemetry.models import TelemetryAlert, TelemetryReading
 
 
 @dataclass

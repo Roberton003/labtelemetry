@@ -6,9 +6,15 @@ try:
 except ImportError:
     ModbusTCPAdapter = None
 
+try:
+    from telemetry.sources.opcua import OpcUaAdapter
+except ImportError:
+    OpcUaAdapter = None
+
 __all__ = [
     "TelemetrySample",
     "TelemetrySource",
     "SimulatorAdapter",
     "ModbusTCPAdapter",
+    "OpcUaAdapter",
 ]

@@ -28,7 +28,7 @@ Open:
 
 ```bash
 .venv/bin/python labtelemetry/manage.py simulate_telemetry --once --seed 42 --sensors 6
-.venv/bin/python labtelemetry/manage.py telemetry_simulate --seed 42 --count 50
+.venv/bin/python labtelemetry/manage.py simulate_telemetry --seed 42 --iterations 50
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
 ```
 

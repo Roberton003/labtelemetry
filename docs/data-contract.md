@@ -9,7 +9,7 @@ publica do LabTelemetry.
 
 | Papel | Sistema | Dado |
 |---|---|---|
-| Produtor primario | `telemetry_simulate` ou `ingest_telemetry` | `TelemetryReading` |
+| Produtor primario | `simulate_telemetry` ou `ingest_telemetry` | `TelemetryReading` |
 | Produtor secundario | `quality.py` | `TelemetryAlert` |
 | Consumidor | Dashboard HTML/HTMX | `/api/summary/`, `/api/readings/recent/`, `/api/alerts/active/` |
 | Consumidor | Avaliador tecnico | `curl` ou cliente HTTP simples |
@@ -41,7 +41,7 @@ Contrato:
 - `raw_value`: valor lido da fonte
 - `calibrated_value`: valor persistido para avaliacao de qualidade
 - `value`: alias de `calibrated_value` no endpoint de leituras recentes
-- `source`: lineage curto, por exemplo `simulator:seed=42` ou `modbus:host:port`
+- `source`: lineage curto, por exemplo `simulator:seed=42`, `modbus:host:port` ou `opcua:host:port`
 - `status`: enum `NORMAL | OUT_OF_BOUNDS | DRIFT_WARNING`
 
 ### `TelemetryReading` em `/api/sensors/{id}/readings/`

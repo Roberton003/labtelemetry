@@ -1,4 +1,20 @@
 services:
+  app:
+    build: .
+    container_name: labtelemetry_app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://labtelemetry:labtelemetry_dev@postgres:5432/labtelemetry
+      OTEL_ENABLED: "True"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    depends_on:
+      postgres:
+        condition: service_started
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: labtelemetry_postgres

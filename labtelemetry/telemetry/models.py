@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import UniqueConstraint
+
 
 class TelemetrySensor(models.Model):
     PARAMETER_CHOICES = [
@@ -20,13 +22,16 @@ class TelemetrySensor(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_parameter_display()})"
 
+
 class TelemetryReading(models.Model):
     STATUS_CHOICES = [
         ("NORMAL", "Normal"),
         ("OUT_OF_BOUNDS", "Fora dos Limites de Processo"),
         ("DRIFT_WARNING", "Alerta de Desvio de Calibração"),
     ]
-    sensor = models.ForeignKey(TelemetrySensor, on_delete=models.CASCADE, related_name="readings")
+    sensor = models.ForeignKey(
+        TelemetrySensor, on_delete=models.CASCADE, related_name="readings"
+    )
     timestamp = models.DateTimeField()
     raw_value = models.FloatField()
     calibrated_value = models.FloatField()
@@ -34,15 +39,20 @@ class TelemetryReading(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="NORMAL")
 
     class Meta:
-        indexes = [
-            models.Index(fields=["sensor", "timestamp"]),
+        constraints = [
+            UniqueConstraint(
+                fields=["sensor", "timestamp"], name="uq_sensor_timestamp"
+            ),
         ]
 
     def __str__(self):
         return f"{self.sensor.name} - {self.timestamp} - {self.calibrated_value}"
 
+
 class TelemetryAlert(models.Model):
-    sensor = models.ForeignKey(TelemetrySensor, on_delete=models.CASCADE, related_name="alerts")
+    sensor = models.ForeignKey(
+        TelemetrySensor, on_delete=models.CASCADE, related_name="alerts"
+    )
     message = models.TextField()
     is_active = models.BooleanField(default=True)
     timestamp = models.DateTimeField(auto_now_add=True)
