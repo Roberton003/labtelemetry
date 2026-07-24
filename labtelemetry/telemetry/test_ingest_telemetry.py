@@ -122,6 +122,47 @@ class IngestTelemetryCommandTest(TestCase):
         self.assertEqual(reading.source, "stub:simulator")
         self.assertIn("Source health: ok", out.getvalue())
 
+    def test_replay_same_window_is_idempotent(self):
+        """Reprocessar a mesma janela nao duplica nem levanta IntegrityError.
+
+        Teste negativo do guardrail: a garantia vem da
+        UniqueConstraint(sensor, timestamp) combinada com
+        bulk_create(ignore_conflicts=True). Antes desse par, a segunda
+        execucao estourava IntegrityError e derrubava o loop de ingestao.
+        """
+        ts = datetime(2026, 6, 23, 12, 0, tzinfo=UTC)
+        samples = [
+            TelemetrySample(
+                sensor_id=self.sensor_ph.id,
+                parameter=self.sensor_ph.parameter,
+                value=7.0,
+                timestamp=ts,
+                source="stub:replay",
+            ),
+            TelemetrySample(
+                sensor_id=self.sensor_turb.id,
+                parameter=self.sensor_turb.parameter,
+                value=6.5,
+                timestamp=ts,
+                source="stub:replay",
+            ),
+        ]
+
+        for _ in range(2):
+            source = _StubSource("stub:replay", samples)
+            with mock.patch(
+                "telemetry.management.commands.ingest_telemetry.Command._build_source",
+                return_value=source,
+            ):
+                call_command(
+                    "ingest_telemetry", "--source", "simulator", "--once",
+                    stdout=StringIO(),
+                )
+
+        self.assertEqual(TelemetryReading.objects.count(), 2)
+        # raise_alert tambem e idempotente: o alerta de turbidez nao duplica.
+        self.assertEqual(TelemetryAlert.objects.count(), 1)
+
     def test_once_with_modbus_source_uses_adapter_configuration(self):
         out = StringIO()
         with mock.patch("telemetry.sources.modbus.ModbusTCPAdapter", _FakeModbusAdapter):

@@ -103,8 +103,12 @@ Contrato:
 
 ## Garantias e Limitacoes
 
-- `ingest_telemetry --once` nao faz deduplicacao; cada execucao cria novas leituras.
-- Cada leitura e persistida individualmente; nao existe batch atomico publico.
+- `ingest_telemetry` deduplica por `(sensor, timestamp)` via `UniqueConstraint` +
+  `bulk_create(ignore_conflicts=True)`: reprocessar a mesma janela e no-op.
+  Detalhes e limites em [replay-idempotency.md](replay-idempotency.md).
+- Dois valores diferentes no mesmo `(sensor, timestamp)` colapsam no primeiro;
+  nao ha upsert.
+- Leituras sao persistidas em lote por ciclo de leitura da fonte.
 - `source` guarda somente lineage curto, nao payload bruto do protocolo.
 - Nao ha SLO publico de latencia para a API.
 

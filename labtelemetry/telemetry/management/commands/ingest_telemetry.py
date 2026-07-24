@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from django.core.management.base import BaseCommand
 
 from telemetry.models import TelemetryReading, TelemetrySensor
-from telemetry.quality import evaluate_and_alert
+from telemetry.quality import evaluate_reading, raise_alert
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class Command(BaseCommand):
         batch_size = options["batch_size"]
         iteration = 0
         total_samples = 0
-        total_readings = 0
+        total_processed = 0
 
         self.stdout.write(
             f"Source: {source.name}, interval={interval}s, batch_size={batch_size}"
@@ -77,17 +77,22 @@ class Command(BaseCommand):
                     for sample in samples[:batch_size]:
                         reading = self._sample_to_reading(sample)
                         if reading is not None:
-                            evaluate_and_alert(reading)
+                            # Avaliacao pura: nenhum acesso ao banco no loop.
+                            reading.status = evaluate_reading(reading)
                             batch.append(reading)
-                            total_readings += 1
                     if batch:
+                        # ignore_conflicts + UniqueConstraint(sensor, timestamp):
+                        # reprocessar a mesma janela e no-op, nao IntegrityError.
                         TelemetryReading.objects.bulk_create(
                             batch, ignore_conflicts=True
                         )
+                        for reading in batch:
+                            raise_alert(reading)
+                        total_processed += len(batch)
                     total_samples += len(samples)
                     self.stdout.write(
                         f"[{iteration}] Read {len(samples)} samples, "
-                        f"{total_readings} total readings"
+                        f"{total_processed} processed"
                     )
 
                 iteration += 1
@@ -103,7 +108,7 @@ class Command(BaseCommand):
             source.close()
 
         self.stdout.write(
-            f"Ingest complete: {total_samples} samples, {total_readings} readings. "
+            f"Ingest complete: {total_samples} samples, {total_processed} processed. "
             f"Source health: {health.get('status', 'unknown')}"
         )
 

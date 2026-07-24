@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   lint:
@@ -35,16 +35,34 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    env:
+      DATABASE_URL: postgres://labtelemetry:labtelemetry@localhost:5432/labtelemetry
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-      - name: Run tests
+        run: pip install -r requirements.txt
+
+      - name: Django system check
+        run: python manage.py check
         working-directory: ./labtelemetry
-        run: python manage.py test -v 2
+
+      - name: Migrations are in sync with models
+        run: python manage.py makemigrations --check --dry-run
+        working-directory: ./labtelemetry
+
+      - name: Run tests
+        run: python manage.py test telemetry -v 2
+        working-directory: ./labtelemetry
+
+      # Informativo: o projeto e um lab local, DEBUG=True por padrao.
+      # Expoe o delta ate um deploy real sem travar o CI.
+      - name: Deployment checklist (informational)
+        continue-on-error: true
+        run: python manage.py check --deploy
+        working-directory: ./labtelemetry
         env:
-          DATABASE_URL: postgres://labtelemetry:labtelemetry@localhost:5432/labtelemetry
+          DEBUG: "False"
