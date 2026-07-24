@@ -120,6 +120,9 @@ docker compose up --build -d
 
 Dashboard em http://127.0.0.1:8000/ · Jaeger em http://localhost:16686
 
+> Já tem um Postgres ou um collector OTLP local ocupando as portas? Sobrescreva sem editar o compose:
+> `POSTGRES_PORT=55432 OTLP_GRPC_PORT=54317 OTLP_HTTP_PORT=54318 docker compose up -d`
+
 ### Rodar localmente (SQLite, sem Docker)
 
 ```bash
@@ -170,6 +173,8 @@ Todas em `.env` (ver [.env.example](.env.example)):
 | `OTEL_ENABLED` | `False` | Liga a instrumentação OpenTelemetry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | Coletor OTLP (Jaeger) |
 | `OTEL_SERVICE_NAME` | `labtelemetry` | Nome do serviço nos traces |
+| `APP_PORT` / `POSTGRES_PORT` | `8000` / `5432` | Portas publicadas no host pelo Compose |
+| `OTLP_GRPC_PORT` / `OTLP_HTTP_PORT` / `JAEGER_UI_PORT` | `4317` / `4318` / `16686` | Portas do Jaeger no host |
 
 ---
 
