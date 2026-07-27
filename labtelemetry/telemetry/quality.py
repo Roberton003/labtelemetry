@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
+from telemetry.models import TelemetryAlert, TelemetryReading
 
 
 @dataclass
@@ -38,24 +38,40 @@ def evaluate_reading(reading: TelemetryReading) -> str:
     return "NORMAL"
 
 
+def raise_alert(reading: TelemetryReading) -> None:
+    """Abre um alerta para a leitura, se ainda nao houver um ativo do mesmo tipo.
+
+    Idempotente: chamar duas vezes para o mesmo sensor/status nao duplica o
+    alerta. Nao toca na leitura — quem persiste e o chamador.
+    """
+    status = reading.status
+    if status not in ("OUT_OF_BOUNDS", "DRIFT_WARNING"):
+        return
+
+    existing_active = TelemetryAlert.objects.filter(
+        sensor=reading.sensor,
+        is_active=True,
+        message__startswith=f"[{status}]",
+    ).exists()
+    if not existing_active:
+        TelemetryAlert.objects.create(
+            sensor=reading.sensor,
+            message=f"[{status}] {reading.sensor.parameter}={reading.calibrated_value:.2f} em {reading.timestamp.isoformat()}",
+        )
+
+
 def evaluate_and_alert(reading: TelemetryReading) -> str:
-    status = evaluate_reading(reading)
-    reading.status = status
+    """Avalia, persiste e alerta uma leitura isolada.
+
+    Para lotes, prefira `evaluate_reading` + `bulk_create` + `raise_alert`:
+    esta funcao faz um INSERT/UPDATE por leitura.
+    """
+    reading.status = evaluate_reading(reading)
     if reading.pk is None:
         reading.save()
     else:
         reading.save(update_fields=["status"])
 
-    if status in ("OUT_OF_BOUNDS", "DRIFT_WARNING"):
-        existing_active = TelemetryAlert.objects.filter(
-            sensor=reading.sensor,
-            is_active=True,
-            message__startswith=f"[{status}]",
-        ).exists()
-        if not existing_active:
-            TelemetryAlert.objects.create(
-                sensor=reading.sensor,
-                message=f"[{status}] {reading.sensor.parameter}={reading.calibrated_value:.2f} em {reading.timestamp.isoformat()}",
-            )
+    raise_alert(reading)
 
-    return status
+    return reading.status

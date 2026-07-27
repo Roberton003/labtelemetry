@@ -22,6 +22,7 @@ automação40/
 .vscode/
 .idea/
 .gemini/
+.serena/
 .DS_Store
 
 # --- SECURITY & COMPLIANCE RULES (NEVER EXPOSE PLANNING/SENSITIVE FILES) ---
@@ -42,3 +43,19 @@ automação40/
 /docs/execution/
 /docs/prd/
 /docs/process/
+
+# Architecture Decision Records (internal governance)
+/docs/adr/
+
+# Heuristics usage log (local-only tooling artifact)
+.heuristics_usage_log.json
+
+# Session handoff state (local-only tooling artifact)
+.last-handoff.json
+
+# Local tooling caches
+.tokensave/
+.pytest_cache/
+.ruff_cache/
+.claude/
+.serena/

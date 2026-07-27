@@ -1,13 +1,33 @@
 import logging
-from datetime import datetime, timezone
-from io import StringIO
-from typing import Any
-
-from django.core.management import call_command
+import random
+from datetime import UTC, datetime, timedelta
 
 from telemetry.sources.base import TelemetrySample, TelemetrySource
 
 logger = logging.getLogger(__name__)
+
+BASE_VALUES = {
+    "PH": {"mean": 7.0, "std": 0.3},
+    "TURBIDITY": {"mean": 2.0, "std": 0.5},
+    "TOC": {"mean": 5.0, "std": 1.0},
+}
+
+SENSOR_DEFAULTS = [
+    {"name": "pH Entrada", "parameter": "PH"},
+    {"name": "pH Saída", "parameter": "PH"},
+    {"name": "Turbidez Entrada", "parameter": "TURBIDITY"},
+    {"name": "Turbidez Saída", "parameter": "TURBIDITY"},
+    {"name": "TOC Entrada", "parameter": "TOC"},
+    {"name": "TOC Saída", "parameter": "TOC"},
+]
+
+
+def generate_value(parameter: str, rng: random.Random, anomaly: bool = False) -> float:
+    cfg = BASE_VALUES.get(parameter, {"mean": 50.0, "std": 10.0})
+    if anomaly:
+        offset = rng.uniform(-3, 3) * cfg["std"]
+        return cfg["mean"] + offset * 3
+    return rng.gauss(cfg["mean"], cfg["std"])
 
 
 class SimulatorAdapter(TelemetrySource):
@@ -22,64 +42,43 @@ class SimulatorAdapter(TelemetrySource):
         return f"simulator:seed={self._seed}"
 
     def read(self) -> list[TelemetrySample]:
-        buf = StringIO()
-        try:
-            call_command(
-                "telemetry_simulate",
-                seed=self._seed,
-                count=self._count,
-                anomaly_rate=str(self._anomaly_rate),
-                stdout=buf,
-            )
-        except Exception as exc:
-            logger.error("Simulator read failed: %s", exc)
-            return []
+        from telemetry.models import TelemetrySensor
 
-        now = datetime.now(timezone.utc)
-        self._last_read = now
-        output = buf.getvalue().strip()
-
-        samples: list[TelemetrySample] = []
-        reading_map = self._parse_last_readings()
-
-        for sensor_id, reading in reading_map.items():
-            is_anomaly = reading.get("status", "NORMAL") != "NORMAL"
-            samples.append(
-                TelemetrySample(
-                    sensor_id=sensor_id,
-                    parameter=reading.get("parameter", "UNKNOWN"),
-                    value=reading.get("calibrated_value", 0.0),
-                    timestamp=reading.get("timestamp", now),
-                    quality="BAD" if is_anomaly else "GOOD",
-                    source=self.name,
-                    raw_payload=reading,
-                    metadata={"output": output},
+        sensors = list(TelemetrySensor.objects.all())
+        if not sensors:
+            for sdef in SENSOR_DEFAULTS:
+                TelemetrySensor.objects.get_or_create(
+                    name=sdef["name"], parameter=sdef["parameter"]
                 )
-            )
+            sensors = list(TelemetrySensor.objects.all())
+            logger.info("Criados %d sensores padrao", len(sensors))
 
+        now = datetime.now(UTC)
+        rng = random.Random(self._seed)
+        samples: list[TelemetrySample] = []
+
+        for i in range(self._count):
+            ts = now + timedelta(seconds=i * 5.0)
+            for sensor in sensors:
+                anomaly = rng.random() < self._anomaly_rate
+                raw = generate_value(sensor.parameter, rng, anomaly)
+                samples.append(
+                    TelemetrySample(
+                        sensor_id=sensor.id,
+                        parameter=sensor.parameter,
+                        value=round(raw, 4),
+                        timestamp=ts,
+                        quality="BAD" if anomaly else "GOOD",
+                        source=self.name,
+                        raw_payload={
+                            "raw": round(raw, 4),
+                            "anomaly": anomaly,
+                        },
+                    )
+                )
+
+        self._last_read = now
         return samples
-
-    def _parse_last_readings(self) -> dict[int, dict[str, Any]]:
-        from telemetry.models import TelemetryReading
-
-        latest = (
-            TelemetryReading.objects.select_related("sensor")
-            .order_by("sensor_id", "-timestamp")
-        )
-        result: dict[int, dict[str, Any]] = {}
-        seen: set[int] = set()
-        for r in latest:
-            if r.sensor_id in seen:
-                continue
-            seen.add(r.sensor_id)
-            result[r.sensor_id] = {
-                "parameter": r.sensor.parameter,
-                "value": r.raw_value,
-                "calibrated_value": r.calibrated_value,
-                "status": r.status,
-                "timestamp": r.timestamp,
-            }
-        return result
 
     def health(self) -> dict:
         return {

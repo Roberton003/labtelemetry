@@ -2,98 +2,126 @@
 
 ## Contexto
 
-O LabTelemetry não foi projetado com garantias formais de exactly-once.
-Este documento explica o comportamento real do sistema para que avaliadores
-entendam os trade-offs sem surpresas.
+O LabTelemetry não oferece garantia formal de *exactly-once*. Este documento
+descreve o comportamento real do sistema — o que é garantido, o que não é, e
+onde exatamente fica a fronteira — para que ninguém descubra o limite em
+produção.
 
-## Estado Atual
+## A garantia que existe
 
-### Ingestão (`ingest_telemetry --once`)
+A deduplicação é feita **no banco, não na aplicação**:
 
-Cada execução do comando `ingest_telemetry --once`:
-1. Abre uma conexão com a fonte (`SimulatorAdapter` ou `ModbusTCPAdapter`)
-2. Itera sobre as amostras fornecidas pela fonte
-3. Para cada amostra, cria um `TelemetryReading` no banco
-
-**Comportamento:** Não há verificação de duplicata. Se o mesmo comando for
-executado duas vezes com o mesmo seed, serão criados registros duplicados
-(com `id` diferente, mesmo `timestamp` e `raw_value`).
-
-### Simulação (`telemetry_simulate --seed 42 --count N`)
-
-Usa `seed` para gerar a mesma sequência de leituras, mas **não verifica**
-se aquelas leituras já existem. Cada execução insere N novos registros.
-
-## Como Replay Funciona (e Não Funciona)
-
-### Cenário: Reproduzir uma falha
-
-```bash
-# Primeira execução — gera 10 leituras
-telemetry_simulate --seed 42 --count 10 --anomaly-rate 0.3
-
-# Segunda execução — gera OUTRAS 10 leituras (mesmo seed, mesmo valor)
-telemetry_simulate --seed 42 --count 10 --anomaly-rate 0.3
-# Resultado: 20 leituras no banco, as 10 primeiras duplicadas em valor
+```python
+# telemetry/models.py
+class Meta:
+    constraints = [
+        UniqueConstraint(fields=["sensor", "timestamp"], name="uq_sensor_timestamp"),
+    ]
 ```
 
-**Conclusão:** O seed garante **repetibilidade do valor**, não
-**idempotência de inserção**.
+```python
+# telemetry/management/commands/ingest_telemetry.py
+TelemetryReading.objects.bulk_create(batch, ignore_conflicts=True)
+```
 
-### Cenário: Reprocessar um dia
+O par constraint + `ignore_conflicts` é o que dá a garantia. Reprocessar a
+mesma janela `(sensor, timestamp)` é **no-op**: as linhas já existentes são
+descartadas pelo banco, sem erro e sem duplicata.
 
-Não há suporte a janela temporal de reprocessamento. O comando sempre
-cria leituras "novas" com timestamp = agora.
+Optar pela constraint em vez de um `get_or_create` por leitura é deliberado:
+a checagem acontece uma vez por lote, dentro do banco, em vez de um `SELECT`
+por amostra vindo da aplicação.
 
-## Deduplicação
+### Teste negativo
 
-**Não existe.** Não há índice único natural, hash ou upsert que impeça
-duplicatas. A chave primária é `id` (auto-increment), que por definição
-nunca colide.
+A garantia não é uma alegação deste documento — ela tem um teste que falha
+quando o mecanismo é removido:
 
-### O que impediria deduplicar hoje
+```
+telemetry.test_ingest_telemetry.IngestTelemetryCommandTest
+    .test_replay_same_window_is_idempotent
+```
 
-- `TelemetryReading` não tem `(sensor_id, timestamp, raw_value)` como
-  unique constraint
-- Django ORM não suporta `INSERT ... ON CONFLICT` sem raw SQL ou
-  `get_or_create` (que adiciona SELECT antes de INSERT)
-- Não há hash de payload ou identificador de fonte externa
+Ele executa a mesma janela duas vezes e afirma que a contagem de leituras não
+dobra. Sem `ignore_conflicts`, a segunda execução levanta
+`IntegrityError: UNIQUE constraint failed` e derruba o loop de ingestão —
+comportamento verificado antes do fix, não presumido.
 
-## Idempotência Real no Sistema
+## A garantia que NÃO existe
 
-Apesar da ingestão não ser idêntica, **algumas partes do sistema são
-idempotentes por construção:**
+`(sensor, timestamp)` é a chave de deduplicação. Isso tem duas consequências
+que valem estar explícitas:
 
-| Componente | Idempotente? | Como |
-|-----------|-------------|------|
-| `quality.py: evaluate_and_alert()` | ✅ Sim | Se alerta ativo já existe para o mesmo problema, não recria |
-| `GET /api/...` | ✅ Sim | REST GET é naturalmente idempotente |
-| `migrate` | ✅ Sim | Django migrations são idempotentes |
-| `ingest_telemetry --once` | ❌ Não | Cada execução cria novas leituras |
-| `telemetry_simulate` | ❌ Não | Cada execução cria novas leituras |
+1. **Dois valores diferentes no mesmo `(sensor, timestamp)` colapsam no
+   primeiro.** A segunda leitura é silenciosamente descartada, não corrigida.
+   Não há *upsert*, não há "última escrita vence".
+2. **Timestamps diferentes nunca deduplicam**, mesmo com valor idêntico. Se a
+   fonte carimba `timestamp = agora`, cada execução é uma janela nova — e
+   portanto insere linhas novas, corretamente.
 
-## O Que Mudaria para Idempotência Formal
+Não há hash de payload nem identificador de evento da fonte externa. A
+identidade de uma leitura é o par sensor/instante, e nada além disso.
 
-Se o projeto evoluísse para exigir exactly-once:
+## Como replay funciona na prática
 
-1. **Unique constraint:** Adicionar `(sensor_id, timestamp, raw_value)` como
-   unique → `INSERT ... ON CONFLICT DO NOTHING`
-2. **Hash de payload:** `SHA256(raw_value + timestamp + sensor_id)` como
-   chave natural
-3. **Campo `source`:** Identificar origem para evitar colisão entre
-   simulador e Modbus
-4. **Janela de replay:** Permitir `--start-time` e `--end-time` no comando
-   de ingestão
+### Reproduzir uma sequência de valores
+
+```bash
+simulate_telemetry --seed 42 --iterations 10 --anomaly-rate 0.3
+```
+
+O `--seed` garante **repetibilidade do valor**, não idempotência de inserção —
+são coisas distintas. Como `simulate_telemetry` carimba `timestamp = agora` a
+cada execução, rodar duas vezes produz 20 linhas com os mesmos 10 valores em
+instantes diferentes. Isso é o comportamento correto: são duas observações
+distintas do mesmo cenário simulado.
+
+### Reprocessar uma janela vinda de uma fonte OT
+
+Quando a fonte fornece o timestamp (Modbus e OPC-UA fornecem), o replay é
+idempotente de verdade:
+
+```bash
+# Executar duas vezes sobre a mesma janela da fonte
+python manage.py ingest_telemetry --source modbus --once
+python manage.py ingest_telemetry --source modbus --once
+# As leituras cujo (sensor, timestamp) ja existe sao descartadas pelo banco
+```
+
+Não há, hoje, um `--start-time`/`--end-time` para pedir uma janela histórica
+explícita à fonte. Replay dirigido por janela está fora do escopo atual.
+
+## Mapa de idempotência
+
+| Componente | Idempotente? | Mecanismo |
+|---|---|---|
+| `ingest_telemetry` (mesmo sensor+timestamp) | ✅ Sim | `UniqueConstraint` + `bulk_create(ignore_conflicts=True)` |
+| `ingest_telemetry` (timestamp novo a cada leitura) | ❌ Não | Janela diferente = leitura diferente, por definição |
+| `quality.raise_alert()` | ✅ Sim | Não recria alerta se já houver um ativo do mesmo tipo para o sensor |
+| `GET /api/...` | ✅ Sim | GET é idempotente por contrato HTTP |
+| `migrate` | ✅ Sim | Migrations do Django |
+| `simulate_telemetry` | ❌ Não | Carimba `timestamp = agora`; cada execução é uma janela nova |
+
+## O que mudaria para exactly-once formal
+
+Fora do escopo atual, registrado como evolução:
+
+1. **Chave natural mais forte:** incluir `source` na constraint, para que
+   simulador e Modbus não disputem o mesmo `(sensor, timestamp)`.
+2. **Upsert de verdade:** `INSERT ... ON CONFLICT DO UPDATE` via
+   `bulk_create(update_conflicts=True)`, para que a releitura corrija o valor
+   em vez de descartá-lo.
+3. **Hash de payload** como identidade do evento, desacoplando a deduplicação
+   da precisão do timestamp.
+4. **Janela de replay explícita:** `--start-time` / `--end-time` no comando de
+   ingestão.
 
 ## Resumo
 
 | Pergunta | Resposta |
-|----------|----------|
-| Posso executar o mesmo comando duas vezes? | Sim, mas cria duplicatas |
+|---|---|
+| Posso reexecutar a ingestão da mesma janela? | Sim — é no-op, não duplica nem falha |
 | Posso reproduzir a mesma sequência de valores? | Sim, com `--seed` |
-| Posso reprocessar uma janela temporal? | Não |
+| Uma releitura corrige um valor já gravado? | Não — é descartada |
+| Posso pedir uma janela histórica à fonte? | Não |
 | O sistema impede alerta duplicado? | Sim |
-| O sistema impede leitura duplicada? | Não |
-
-Esta é uma limitação documentada e aceita para o MVP. Idempotência formal
-está no backlog como evolução futura.

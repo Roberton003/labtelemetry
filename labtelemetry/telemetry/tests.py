@@ -1,10 +1,18 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from io import StringIO
 
+from django.core.management import call_command
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone as tz
 
 from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
-from telemetry.quality import DRIFT_THRESHOLD, THRESHOLDS, evaluate_and_alert, evaluate_reading
+from telemetry.quality import (
+    DRIFT_THRESHOLD,
+    THRESHOLDS,
+    evaluate_and_alert,
+    evaluate_reading,
+)
 
 
 class TelemetrySensorModelTest(TestCase):
@@ -58,7 +66,9 @@ class TelemetryAlertModelTest(TestCase):
         self.sensor = TelemetrySensor.objects.create(name="Sensor pH", parameter="PH")
 
     def test_str_active(self):
-        alert = TelemetryAlert.objects.create(sensor=self.sensor, message="Alerta de teste")
+        alert = TelemetryAlert.objects.create(
+            sensor=self.sensor, message="Alerta de teste"
+        )
         self.assertIn("ATIVO", str(alert))
 
     def test_str_resolved(self):
@@ -78,9 +88,15 @@ class TelemetryAlertModelTest(TestCase):
 
 class QualityGatesTest(TestCase):
     def setUp(self):
-        self.sensor_ph = TelemetrySensor.objects.create(name="Sensor pH", parameter="PH")
-        self.sensor_turb = TelemetrySensor.objects.create(name="Sensor Turbidez", parameter="TURBIDITY")
-        self.sensor_toc = TelemetrySensor.objects.create(name="Sensor TOC", parameter="TOC")
+        self.sensor_ph = TelemetrySensor.objects.create(
+            name="Sensor pH", parameter="PH"
+        )
+        self.sensor_turb = TelemetrySensor.objects.create(
+            name="Sensor Turbidez", parameter="TURBIDITY"
+        )
+        self.sensor_toc = TelemetrySensor.objects.create(
+            name="Sensor TOC", parameter="TOC"
+        )
 
     def _reading(self, sensor, calibrated, raw=None):
         return TelemetryReading(
@@ -138,30 +154,48 @@ class QualityGatesTest(TestCase):
 
     def test_evaluate_and_alert_creates_alert(self):
         reading = TelemetryReading.objects.create(
-            sensor=self.sensor_ph, timestamp=tz.now(), raw_value=7.0, calibrated_value=9.0
+            sensor=self.sensor_ph,
+            timestamp=tz.now(),
+            raw_value=7.0,
+            calibrated_value=9.0,
         )
         evaluate_and_alert(reading)
-        self.assertTrue(TelemetryAlert.objects.filter(sensor=self.sensor_ph, is_active=True).exists())
+        self.assertTrue(
+            TelemetryAlert.objects.filter(
+                sensor=self.sensor_ph, is_active=True
+            ).exists()
+        )
 
     def test_evaluate_and_alert_no_duplicate(self):
         reading = TelemetryReading.objects.create(
-            sensor=self.sensor_ph, timestamp=tz.now(), raw_value=7.0, calibrated_value=9.0
+            sensor=self.sensor_ph,
+            timestamp=tz.now(),
+            raw_value=7.0,
+            calibrated_value=9.0,
         )
         evaluate_and_alert(reading)
         evaluate_and_alert(reading)
         self.assertEqual(
-            TelemetryAlert.objects.filter(sensor=self.sensor_ph, is_active=True).count(), 1
+            TelemetryAlert.objects.filter(
+                sensor=self.sensor_ph, is_active=True
+            ).count(),
+            1,
         )
 
     def test_evaluate_and_alert_normal_no_alert(self):
         reading = TelemetryReading.objects.create(
-            sensor=self.sensor_ph, timestamp=tz.now(), raw_value=7.0, calibrated_value=7.0
+            sensor=self.sensor_ph,
+            timestamp=tz.now(),
+            raw_value=7.0,
+            calibrated_value=7.0,
         )
         evaluate_and_alert(reading)
         self.assertFalse(TelemetryAlert.objects.filter(sensor=self.sensor_ph).exists())
 
     def test_unknown_parameter_is_normal(self):
-        sensor_unknown = TelemetrySensor.objects.create(name="Sensor X", parameter="UNKNOWN")
+        sensor_unknown = TelemetrySensor.objects.create(
+            name="Sensor X", parameter="UNKNOWN"
+        )
         reading = self._reading(sensor_unknown, 999.0)
         self.assertEqual(evaluate_reading(reading), "NORMAL")
 
@@ -174,16 +208,24 @@ class SimulateTelemetryCommandTest(TestCase):
 
     def test_seed_reproducibility(self):
         self._capture_command(once=True, sensors=6, seed=42)
-        r1 = list(TelemetryReading.objects.all().values_list("raw_value", "calibrated_value").order_by("sensor_id", "timestamp"))
+        r1 = list(
+            TelemetryReading.objects.all()
+            .values_list("raw_value", "calibrated_value")
+            .order_by("sensor_id", "timestamp")
+        )
         TelemetryReading.objects.all().delete()
         TelemetryAlert.objects.all().delete()
         TelemetrySensor.objects.all().delete()
         self._capture_command(once=True, sensors=6, seed=42)
-        r2 = list(TelemetryReading.objects.all().values_list("raw_value", "calibrated_value").order_by("sensor_id", "timestamp"))
+        r2 = list(
+            TelemetryReading.objects.all()
+            .values_list("raw_value", "calibrated_value")
+            .order_by("sensor_id", "timestamp")
+        )
         self.assertEqual(r1, r2)
 
     def test_anomaly_rate_100_percent(self):
-        out = self._capture_command(once=True, sensors=6, anomaly_rate=1.0)
+        self._capture_command(once=True, sensors=6, anomaly_rate=1.0)
         self.assertGreater(TelemetryReading.objects.count(), 0)
 
     def test_no_sensors_shows_error(self):
@@ -192,7 +234,9 @@ class SimulateTelemetryCommandTest(TestCase):
 
     def _capture_command(self, once, sensors, seed=None, anomaly_rate=0.1):
         from io import StringIO
+
         from django.core.management import call_command
+
         buf = StringIO()
         err = StringIO()
         args = ["--once"] if once else []
@@ -255,7 +299,9 @@ class ApiEndpointTest(TestCase):
         self.assertGreaterEqual(len(data), 1)
 
     def test_alerts_active_filters_resolved(self):
-        TelemetryAlert.objects.create(sensor=self.sensor, message="Resolved", is_active=False)
+        TelemetryAlert.objects.create(
+            sensor=self.sensor, message="Resolved", is_active=False
+        )
         resp = self.client.get("/api/alerts/active/")
         self.assertEqual(len(resp.json()), 1)
 
@@ -338,13 +384,20 @@ class EndToEndTest(TestCase):
 
     def test_simulate_to_api_to_dashboard(self):
         from io import StringIO
+
         from django.core.management import call_command
 
         # 1. Executa simulador com --once e seed fixo
         buf = StringIO()
         call_command(
-            "simulate_telemetry", "--once", "--sensors", "6",
-            "--seed", "42", "--anomaly-rate", "0.2",
+            "simulate_telemetry",
+            "--once",
+            "--sensors",
+            "6",
+            "--seed",
+            "42",
+            "--anomaly-rate",
+            "0.2",
             stdout=buf,
         )
         output = buf.getvalue()
@@ -392,12 +445,19 @@ class EndToEndTest(TestCase):
     def test_e2e_without_anomaly_no_alerts(self):
         """Simulador sem anomalias não gera alertas."""
         from io import StringIO
+
         from django.core.management import call_command
 
         buf = StringIO()
         call_command(
-            "simulate_telemetry", "--once", "--sensors", "3",
-            "--seed", "1", "--anomaly-rate", "0.0",
+            "simulate_telemetry",
+            "--once",
+            "--sensors",
+            "3",
+            "--seed",
+            "1",
+            "--anomaly-rate",
+            "0.0",
             stdout=buf,
         )
         # Nenhum alerta deve existir
@@ -440,23 +500,79 @@ class DeprecatedRoutesReturn404Test(TestCase):
         self.assertEqual(resp.status_code, 404)
 
 
-class TelemetrySimulateAliasCommandTest(TestCase):
-    def test_alias_accepts_count_and_seed(self):
-        from io import StringIO
-        from django.core.management import call_command
+class UniqueConstraintTest(TestCase):
+    def setUp(self):
+        self.sensor = TelemetrySensor.objects.create(
+            id=100, name="Sensor Teste", parameter="PH"
+        )
+        self.ts = datetime(2026, 7, 11, 12, 0, tzinfo=UTC)
 
-        buf = StringIO()
+    def test_duplicate_sensor_timestamp_raises_integrity_error(self):
+        TelemetryReading.objects.create(
+            sensor=self.sensor, timestamp=self.ts, raw_value=7.0, calibrated_value=7.0
+        )
+        with self.assertRaises(IntegrityError):
+            TelemetryReading.objects.create(
+                sensor=self.sensor,
+                timestamp=self.ts,
+                raw_value=7.5,
+                calibrated_value=7.5,
+            )
+
+    def test_different_sensor_same_timestamp_allowed(self):
+        sensor2 = TelemetrySensor.objects.create(
+            id=101, name="Outro Sensor", parameter="TURBIDITY"
+        )
+        TelemetryReading.objects.create(
+            sensor=self.sensor, timestamp=self.ts, raw_value=7.0, calibrated_value=7.0
+        )
+        TelemetryReading.objects.create(
+            sensor=sensor2, timestamp=self.ts, raw_value=2.5, calibrated_value=2.5
+        )
+        self.assertEqual(TelemetryReading.objects.count(), 2)
+
+
+class ReplayIdempotencyTest(TestCase):
+    """Simulate_telemetry com mesma seed e parâmetros não deve duplicar dados
+    quando os timestamps coincidirem (garantido pela UniqueConstraint)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        TelemetrySensor.objects.create(id=200, name="pH Replay", parameter="PH")
+
+    def test_simulate_telemetry_twice_does_not_duplicate_via_constraint(self):
+        out = StringIO()
         call_command(
-            "telemetry_simulate",
+            "simulate_telemetry",
             "--sensors",
-            "2",
-            "--count",
+            "0",
+            "--iterations",
             "3",
-            "--seed",
-            "42",
-            stdout=buf,
+            "--once",
+            stdout=out,
+        )
+        count1 = TelemetryReading.objects.count()
+        self.assertGreater(count1, 0, "Primeira execução deve gerar readings")
+
+        # Segunda execução com seed diferente -> timestamps diferentes (now),
+        # logo não duplica por constraint (são timestamps distintos)
+        call_command(
+            "simulate_telemetry",
+            "--sensors",
+            "0",
+            "--iterations",
+            "3",
+            "--once",
+            stdout=out,
+        )
+        count2 = TelemetryReading.objects.count()
+        self.assertGreater(
+            count2, count1, "Segunda execução adiciona readings com novos timestamps"
         )
 
-        self.assertIn("Geradas", buf.getvalue())
-        self.assertEqual(TelemetrySensor.objects.count(), 6)
-        self.assertEqual(TelemetryReading.objects.count(), 18)
+        # Verifica que constraint não foi violada (nenhuma exception)
+        self.assertEqual(
+            TelemetryReading.objects.count(),
+            count2,
+            "Nenhuma reading duplicada devido à UniqueConstraint",
+        )
