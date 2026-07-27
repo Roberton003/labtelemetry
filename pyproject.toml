@@ -8,3 +8,21 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.coverage.run]
+source = ["labtelemetry/telemetry"]
+omit = [
+    "*/migrations/*",
+    "*/tests.py",
+    "*/test_*.py",
+    # Servidor OPC-UA usado so pelos testes de integracao: e andaime de
+    # teste morando no pacote, nao codigo de producao.
+    "*/sources/opcua_test_server.py",
+]
+
+[tool.coverage.report]
+# Limiar abaixo da cobertura atual (~89%): serve de catraca contra regressao,
+# sem ficar vermelho a cada refatoracao pequena. Subir quando o piso subir.
+fail_under = 85
+show_missing = true
+skip_covered = true

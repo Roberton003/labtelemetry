@@ -44,7 +44,8 @@
 | Frontend | Django Templates + HTMX + Chart.js |
 | Observabilidade | OpenTelemetry → Jaeger (opt-in via `OTEL_ENABLED`) |
 | Runtime | Docker + Gunicorn |
-| Qualidade de código | ruff, 73 testes Django, CI no GitHub Actions |
+| Qualidade de código | ruff, 85 testes Django, gate de cobertura em 85%, CI no GitHub Actions |
+| Reprodutibilidade | Dependências fixadas exatamente, diretas e transitivas |
 
 ---
 
@@ -164,9 +165,17 @@ curl -s http://127.0.0.1:8000/api/summary/
 ### Validar
 
 ```bash
-python labtelemetry/manage.py test telemetry   # 73 testes
+pip install -r requirements-dev.txt
+
+python labtelemetry/manage.py test telemetry   # 85 testes
 ruff check labtelemetry/
+
+# Gate de cobertura (mínimo 85%, atual 89%) — rodar da raiz do repo
+coverage run labtelemetry/manage.py test telemetry --exclude-tag=integration
+coverage report
 ```
+
+Os testes marcados `@tag("integration")` sobem um servidor OPC-UA real. Rodam no gate de correção, mas ficam fora da medição de cobertura: sob o tracer do `coverage`, o startup do servidor passa de ~2s para ~56s.
 
 Roteiro completo em [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md).
 
@@ -228,7 +237,7 @@ labtelemetry/
 │       │   ├── ingest_telemetry.py   # Runner: fonte → qualidade → lote
 │       │   └── simulate_telemetry.py # Gerador de cenário sintético
 │       ├── templates/telemetry/      # Dashboard + parciais HTMX
-│       └── test_*.py, tests.py       # 73 testes
+│       └── test_*.py, tests.py       # 85 testes
 ├── docs/                       # Documentação pública + wiki-seed
 ├── sql/analytics/              # Consultas operacionais
 ├── .github/workflows/ci.yml    # ruff + testes com Postgres 16

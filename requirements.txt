@@ -1,11 +1,62 @@
+# Dependencias de runtime, fixadas exatamente — diretas E transitivas.
+#
+# Transitiva sem pin e a que quebra o build meses depois, sem ninguem ter
+# tocado no codigo. Este conjunto foi resolvido num venv limpo e validado
+# com a suite completa (85 testes) antes de ser fixado.
+#
+# Diretas (o resto e transitivo):
+#   Django, psycopg[binary], dj-database-url, python-dotenv, gunicorn,
+#   pymodbus, asyncua, opentelemetry-distro, opentelemetry-exporter-otlp,
+#   opentelemetry-instrumentation-django, opentelemetry-instrumentation-psycopg
+#
+# Para regenerar apos mudar uma direta:
+#   python3 -m venv /tmp/pin && /tmp/pin/bin/pip install <diretas com ==>
+#   /tmp/pin/bin/python labtelemetry/manage.py test telemetry   # tem que passar
+#   /tmp/pin/bin/pip freeze | sort -f                           # + este cabecalho
+
+aiosqlite==0.22.1
+anyio==4.14.2
+asgiref==3.12.1
+asyncua==2.0.1
+certifi==2026.7.22
+cffi==2.1.0
+charset-normalizer==3.4.9
+cryptography==49.0.0
 Django==5.2.9
-psycopg[binary]
-dj-database-url
-python-dotenv
-opentelemetry-distro
-opentelemetry-exporter-otlp
-opentelemetry-instrumentation-django
-opentelemetry-instrumentation-psycopg
-pymodbus>=3.8,<4.0
-asyncua>=2.0,<3.0
-gunicorn>=23.0,<24.0
+dj-database-url==3.1.2
+googleapis-common-protos==1.75.0
+grpcio==1.83.0
+gunicorn==23.0.0
+idna==3.18
+opentelemetry-api==1.42.1
+opentelemetry-distro==0.63b1
+opentelemetry-exporter-otlp==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-grpc==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-instrumentation==0.63b1
+opentelemetry-instrumentation-dbapi==0.63b1
+opentelemetry-instrumentation-django==0.63b1
+opentelemetry-instrumentation-psycopg==0.63b1
+opentelemetry-instrumentation-wsgi==0.63b1
+opentelemetry-proto==1.42.1
+opentelemetry-sdk==1.42.1
+opentelemetry-semantic-conventions==0.63b1
+opentelemetry-util-http==0.63b1
+packaging==26.2
+protobuf==6.33.6
+psycopg==3.3.4
+psycopg-binary==3.3.4
+pycparser==3.0
+pymodbus==3.13.1
+pyOpenSSL==26.3.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+pytz==2026.3.post1
+requests==2.34.2
+six==1.17.0
+sortedcontainers==2.4.0
+sqlparse==0.5.5
+typing_extensions==4.16.0
+urllib3==2.7.0
+wrapt==2.2.2

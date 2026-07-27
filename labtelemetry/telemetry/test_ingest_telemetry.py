@@ -3,7 +3,7 @@ from io import StringIO
 from unittest import mock
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, tag
 
 from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
 from telemetry.sources.base import TelemetrySample
@@ -399,6 +399,7 @@ class IngestOpcUaSourceTest(TestCase):
         )
         self.assertEqual(TelemetryReading.objects.count(), 1)
 
+    @tag("integration")
     def test_end_to_end_against_live_opcua_server_persists_readings(self):
         """Integracao: servidor OPC-UA real -> comando -> leituras no banco."""
         import time

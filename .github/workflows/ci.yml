@@ -15,7 +15,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install ruff
-        run: pip install ruff
+        # Versao fixada em requirements-dev.txt: regra de lint nao muda
+        # sozinha entre dois commits identicos.
+        run: pip install "$(grep '^ruff==' requirements-dev.txt)"
       - name: Run ruff
         run: ruff check labtelemetry/
 
@@ -44,7 +46,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Django system check
         run: python manage.py check
@@ -54,9 +56,20 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
         working-directory: ./labtelemetry
 
+      # Gate de correcao: a suite inteira, incluindo os testes de integracao
+      # que sobem um servidor OPC-UA real.
       - name: Run tests
         run: python manage.py test telemetry -v 2
         working-directory: ./labtelemetry
+
+      # Gate de cobertura: roda da raiz para o coverage achar o pyproject.toml.
+      # Exclui os testes de integracao — sob o tracer do coverage o startup do
+      # servidor OPC-UA passa de ~2s para ~56s (medido). Eles ja foram
+      # exercitados no passo acima; aqui o que interessa e a medicao.
+      - name: Coverage gate
+        run: |
+          coverage run labtelemetry/manage.py test telemetry --exclude-tag=integration
+          coverage report
 
       # Informativo: o projeto e um lab local, DEBUG=True por padrao.
       # Expoe o delta ate um deploy real sem travar o CI.

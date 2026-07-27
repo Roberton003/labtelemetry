@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, tag
 
 from telemetry.models import TelemetryReading, TelemetrySensor
 from telemetry.sources.base import TelemetrySample
@@ -130,6 +130,7 @@ class OpcUaAdapterTest(TestCase):
         self.assertEqual(samples, [])
         self.assertIsNone(adapter.health()["last_read"])
 
+    @tag("integration")
     def test_read_with_live_server_returns_samples(self):
         """Integration test: start OPC-UA server, connect, read values."""
         import time

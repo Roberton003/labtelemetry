@@ -57,5 +57,7 @@ automação40/
 .tokensave/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 .claude/
 .serena/

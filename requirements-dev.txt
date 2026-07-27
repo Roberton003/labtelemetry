@@ -1,0 +1,10 @@
+# Ferramentas de desenvolvimento e CI. Nao vao para a imagem de runtime.
+#
+# Fixadas pelo mesmo motivo das de runtime: ate agora o CI fazia
+# `pip install ruff` sem versao, o que significa que a regra de lint podia
+# mudar sozinha entre dois commits identicos.
+
+-r requirements.txt
+
+coverage==7.15.2
+ruff==0.15.21

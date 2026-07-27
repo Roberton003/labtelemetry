@@ -108,4 +108,4 @@ curl -sS "http://127.0.0.1:16686/api/traces?service=labtelemetry&limit=5"
 - a saúde das fontes reporta o simulador como `ok`
 - `/api/summary/` devolve sensores e leituras não-zerados
 - as leituras recentes expõem o campo `source`
-- `manage.py test telemetry` segue verde depois de toda a execução (73 testes)
+- `manage.py test telemetry` segue verde depois de toda a execução (85 testes)
