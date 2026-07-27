@@ -36,6 +36,17 @@ class Command(BaseCommand):
         parser.add_argument("--modbus-port", type=int, default=502)
         parser.add_argument("--modbus-unit", type=int, default=1)
         parser.add_argument("--modbus-timeout", type=float, default=5.0)
+        parser.add_argument(
+            "--modbus-register",
+            action="append",
+            default=None,
+            metavar="ADDRESS:SENSOR_ID[:SCALE]",
+            help=(
+                "Holding register e o sensor que ele alimenta, com escala "
+                "opcional, ex.: '0:3:0.01' (registrador 0 -> sensor 3, valor "
+                "= raw * 0.01). Repetivel, um por registrador."
+            ),
+        )
 
         # OPC-UA args
         parser.add_argument("--opcua-url", default="opc.tcp://localhost:4840")
@@ -130,13 +141,29 @@ class Command(BaseCommand):
         source_type = options["source"]
 
         if source_type == "modbus":
-            from telemetry.sources.modbus import ModbusTCPAdapter
+            from telemetry.sources.modbus import ModbusTCPAdapter, RegisterSpec
+
+            specs = options["modbus_register"]
+            if not specs:
+                self.stderr.write(
+                    "--source modbus exige ao menos um --modbus-register "
+                    "'ADDRESS:SENSOR_ID[:SCALE]' (ex.: '0:3:0.01')"
+                )
+                return None
+
+            registers: list[RegisterSpec] = []
+            for spec in specs:
+                parsed = self._parse_register_spec(spec)
+                if parsed is None:
+                    return None
+                registers.append(parsed)
 
             adapter = ModbusTCPAdapter(
                 host=options["modbus_host"],
                 port=options["modbus_port"],
                 unit_id=options["modbus_unit"],
                 timeout=options["modbus_timeout"],
+                registers=registers,
             )
             adapter.connect()
             if not adapter._connected:
@@ -188,6 +215,40 @@ class Command(BaseCommand):
             )
 
         return None
+
+    def _parse_register_spec(self, spec):
+        """Converte 'ADDRESS:SENSOR_ID[:SCALE]' em RegisterSpec, ou None."""
+        from telemetry.sources.modbus import RegisterSpec
+
+        parts = spec.split(":")
+        if len(parts) not in (2, 3):
+            self.stderr.write(
+                f"--modbus-register invalido: {spec!r}. "
+                "Formato esperado: 'ADDRESS:SENSOR_ID[:SCALE]'."
+            )
+            return None
+
+        address, sensor_id, scale = parts[0], parts[1], (parts[2] if len(parts) == 3 else "1")
+        if not address.strip().isdigit() or not sensor_id.strip().isdigit():
+            self.stderr.write(
+                f"--modbus-register invalido: {spec!r}. "
+                "ADDRESS e SENSOR_ID devem ser inteiros."
+            )
+            return None
+        try:
+            scale_value = float(scale)
+        except ValueError:
+            self.stderr.write(
+                f"--modbus-register invalido: {spec!r}. SCALE deve ser numerico."
+            )
+            return None
+
+        # O parametro vem do sensor no banco, nao do CLP: holding register nao
+        # carrega unidade. Deixar vazio evita disparar o guard de divergencia
+        # em _sample_to_reading com uma comparacao sem sentido.
+        return RegisterSpec(
+            address=int(address), sensor_id=int(sensor_id), scale=scale_value
+        )
 
     def _sample_to_reading(self, sample):
         try:

@@ -51,10 +51,14 @@ flowchart LR
 **Adapters atuais:**
 
 - **`SimulatorAdapter`** — gerador gaussiano por parâmetro, semeado. Caminho reproduzível padrão.
-- **`ModbusTCPAdapter`** — host, porta, unit id e timeout configuráveis; lê holding registers via `pymodbus`.
+- **`ModbusTCPAdapter`** — host, porta, unit id e timeout configuráveis; lê holding registers via `pymodbus`, cada um mapeado a um sensor com fator de escala próprio.
 - **`OpcUaAdapter`** — lê node ids de um servidor OPC-UA via `asyncua`, com servidor de teste incluído.
 
-**Mapeamento tag → ponto:** o adapter recebe `node_ids` e `sensor_ids` em paralelo, porque **índice posicional de node não é chave primária de sensor**. Sem esse mapeamento explícito, o node 0 vira "sensor 0" — que ou não existe, ou é o sensor errado, e o resultado é dado plausível e silenciosamente incorreto. O comando de ingestão exige o par via `--opcua-node "NODE_ID:SENSOR_ID"` e recusa iniciar sem ele.
+**Mapeamento tag → ponto:** ambos os adapters de campo recebem o mapeamento explícito — `sensor_ids` no OPC-UA, `RegisterSpec` no Modbus — porque **índice posicional não é chave primária de sensor**. Sem ele, o node/registrador 0 vira "sensor 0": ou não existe, ou é o sensor errado, e o resultado é dado plausível e silenciosamente incorreto. O comando exige o par (`--opcua-node "NODE_ID:SENSOR_ID"`, `--modbus-register "ADDRESS:SENSOR_ID[:SCALE]"`) e recusa iniciar sem ele.
+
+**Escala no Modbus:** holding register é uint16 — um pH de 7.40 não cabe. O CLP publica `740` e o `RegisterSpec.scale` diz como voltar à grandeza física. É a mesma razão pela qual `TelemetrySensor.calibration_factor` existe um nível acima: o mundo físico precisa de ajuste que o modelo mínimo não enxerga. A escala corrige o *protocolo*; a calibração corrige o *sensor*.
+
+**Leitura por registrador, não em bloco:** endereços esparsos tornam a leitura em bloco inválida em muitos CLPs (registrador não mapeado no meio do span). O adapter faz um round trip por ponto configurado — trade-off explícito, com nota de upgrade no código caso o número de pontos cresça.
 
 **Guard de coerência:** se o `parameter` que a fonte reporta (browse name, no caso do OPC-UA) diverge do parâmetro do sensor no banco, `_sample_to_reading()` emite warning sem descartar a leitura — o browse name pode legitimamente divergir, mas mapeamento trocado é a hipótese mais provável.
 

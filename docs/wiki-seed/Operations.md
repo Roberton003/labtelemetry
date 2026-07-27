@@ -49,8 +49,12 @@ export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/lab
 
 ```bash
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source modbus \
-  --modbus-host 192.168.0.10 --modbus-port 502 --modbus-unit 1
+  --modbus-host 192.168.0.10 --modbus-port 502 --modbus-unit 1 \
+  --modbus-register "0:1:0.01" \
+  --modbus-register "4:2:0.1"
 ```
+
+**Formato do `--modbus-register`:** `ADDRESS:SENSOR_ID[:SCALE]`, repetível, um por registrador. A escala existe porque holding register é uint16 — o CLP publica `740` e o pH real é `7.40`. Omitida, vale `1.0`. Sem ao menos um mapeamento o comando recusa iniciar.
 
 **OPC-UA (fonte real):**
 

@@ -33,7 +33,13 @@ class _StubSource:
 class _FakeModbusAdapter:
     instances = []
 
-    def __init__(self, host="127.0.0.1", port=502, unit_id=1, timeout=5.0, client=None):
+    # Valor bruto que o "CLP" publica em cada holding register (uint16).
+    RAW_BY_ADDRESS = {0: 740, 4: 210}
+
+    def __init__(
+        self, host="127.0.0.1", port=502, unit_id=1, timeout=5.0, client=None,
+        registers=None,
+    ):
         self._host = host
         self._port = port
         self._unit_id = unit_id
@@ -42,6 +48,7 @@ class _FakeModbusAdapter:
         self._connected = False
         self.closed = False
         self._last_read = None
+        self._registers = registers
         _FakeModbusAdapter.instances.append(self)
 
     @property
@@ -55,15 +62,21 @@ class _FakeModbusAdapter:
         if not self._connected:
             return []
         self._last_read = datetime.now(UTC)
+        # Reproduz o contrato do adapter real: valor = raw * scale.
         return [
             TelemetrySample(
-                sensor_id=1,
-                parameter="PH",
-                value=7.4,
+                sensor_id=spec.sensor_id,
+                parameter=spec.parameter,
+                value=self.RAW_BY_ADDRESS[spec.address] * spec.scale,
                 timestamp=self._last_read,
                 source=self.name,
-                raw_payload={"register": 0, "raw": 7.4},
+                raw_payload={
+                    "register": spec.address,
+                    "raw": self.RAW_BY_ADDRESS[spec.address],
+                    "scale": spec.scale,
+                },
             )
+            for spec in (self._registers or [])
         ]
 
     def health(self):
@@ -179,6 +192,9 @@ class IngestTelemetryCommandTest(TestCase):
                 "7",
                 "--modbus-timeout",
                 "0.25",
+                # register 0 -> sensor pH, raw 740 com escala 0.01 => 7.40
+                "--modbus-register",
+                f"0:{self.sensor_ph.id}:0.01",
                 stdout=out,
             )
 
@@ -191,9 +207,114 @@ class IngestTelemetryCommandTest(TestCase):
         self.assertTrue(adapter.closed)
         self.assertEqual(TelemetryReading.objects.count(), 1)
         reading = TelemetryReading.objects.get(sensor=self.sensor_ph)
+        # Sem a escala, o uint16 740 entraria como pH 740 e cairia em
+        # OUT_OF_BOUNDS. Com ela, 7.40 e um pH plausivel.
+        self.assertAlmostEqual(reading.raw_value, 7.40, places=2)
         self.assertEqual(reading.status, "NORMAL")
         self.assertEqual(reading.source, "modbus:plc.local:1502")
         self.assertIn("Source health: connected", out.getvalue())
+
+    def test_modbus_requires_register_mapping(self):
+        with mock.patch("telemetry.sources.modbus.ModbusTCPAdapter", _FakeModbusAdapter):
+            err = StringIO()
+            call_command(
+                "ingest_telemetry", "--source", "modbus", "--once",
+                stdout=StringIO(), stderr=err,
+            )
+
+        self.assertIn("--modbus-register", err.getvalue())
+        self.assertEqual(TelemetryReading.objects.count(), 0)
+
+
+class ModbusRegisterSpecParsingTest(TestCase):
+    def _parse(self, spec):
+        from telemetry.management.commands.ingest_telemetry import Command
+
+        cmd = Command()
+        cmd.stderr = StringIO()
+        return cmd._parse_register_spec(spec), cmd.stderr.getvalue()
+
+    def test_scale_defaults_to_one_when_omitted(self):
+        parsed, _ = self._parse("4:12")
+        self.assertEqual((parsed.address, parsed.sensor_id, parsed.scale), (4, 12, 1.0))
+
+    def test_scale_is_parsed_when_present(self):
+        parsed, _ = self._parse("0:3:0.01")
+        self.assertEqual((parsed.address, parsed.sensor_id), (0, 3))
+        self.assertAlmostEqual(parsed.scale, 0.01)
+
+    def test_rejects_non_numeric_fields(self):
+        for bad in ("a:3", "0:b", "0:3:xyz", "0", "0:3:1:9"):
+            with self.subTest(spec=bad):
+                parsed, err = self._parse(bad)
+                self.assertIsNone(parsed, f"{bad!r} deveria ser rejeitado")
+                self.assertIn("invalido", err)
+
+
+class ModbusAdapterScalingTest(TestCase):
+    class _FakeClient:
+        """Cliente pymodbus minimo: devolve o raw configurado por endereco."""
+
+        def __init__(self, raw_by_address):
+            self._raw = raw_by_address
+            self.addresses_read = []
+
+        def read_holding_registers(self, address, count, slave):
+            self.addresses_read.append(address)
+            return mock.Mock(
+                isError=lambda: False, registers=[self._raw[address]]
+            )
+
+        def connect(self):
+            return True
+
+        def close(self):
+            pass
+
+    def test_reads_only_configured_registers_and_applies_scale(self):
+        from telemetry.sources.modbus import ModbusTCPAdapter, RegisterSpec
+
+        client = self._FakeClient({0: 723, 7: 45})
+        adapter = ModbusTCPAdapter(
+            client=client,
+            registers=[
+                RegisterSpec(address=0, sensor_id=3, scale=0.01),
+                RegisterSpec(address=7, sensor_id=9, scale=0.1),
+            ],
+        )
+        adapter.connect()
+
+        samples = adapter.read()
+
+        # Le so os enderecos configurados — nao um bloco 0..N.
+        self.assertEqual(client.addresses_read, [0, 7])
+        self.assertEqual([s.sensor_id for s in samples], [3, 9])
+        self.assertAlmostEqual(samples[0].value, 7.23)
+        self.assertAlmostEqual(samples[1].value, 4.5)
+        self.assertEqual(samples[0].raw_payload["raw"], 723)
+        self.assertAlmostEqual(samples[0].raw_payload["scale"], 0.01)
+
+    def test_failed_register_is_skipped_without_losing_the_others(self):
+        from telemetry.sources.modbus import ModbusTCPAdapter, RegisterSpec
+
+        class _PartiallyFailingClient(self.__class__._FakeClient):
+            def read_holding_registers(self, address, count, slave):
+                if address == 0:
+                    return mock.Mock(isError=lambda: True)
+                return super().read_holding_registers(address, count, slave)
+
+        adapter = ModbusTCPAdapter(
+            client=_PartiallyFailingClient({0: 1, 7: 45}),
+            registers=[
+                RegisterSpec(address=0, sensor_id=3, scale=0.01),
+                RegisterSpec(address=7, sensor_id=9, scale=0.1),
+            ],
+        )
+        adapter.connect()
+
+        samples = adapter.read()
+
+        self.assertEqual([s.sensor_id for s in samples], [9])
 
 
 class IngestOpcUaSourceTest(TestCase):

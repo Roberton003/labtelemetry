@@ -22,7 +22,8 @@
 
 - **Idempotência garantida pelo banco, não pela aplicação.** A deduplicação vem de `UniqueConstraint(sensor, timestamp)` combinada com `bulk_create(ignore_conflicts=True)` — uma checagem por lote dentro do Postgres, em vez de um `SELECT` por amostra vindo do Python. O guardrail tem [teste negativo](labtelemetry/telemetry/test_ingest_telemetry.py): sem o mecanismo, o replay estoura `IntegrityError`.
 - **Fontes OT plugáveis atrás de uma única ABC.** `TelemetrySource` define `read()`/`health()`/`close()`; Modbus TCP, OPC-UA e simulador são intercambiáveis via `--source`. Adicionar um protocolo não toca o código de ingestão.
-- **Mapeamento tag→ponto é configuração explícita, não convenção.** Node OPC-UA e sensor são ligados por `--opcua-node "ns=2;i=101:3"`. Índice posicional de node ou registrador não é chave primária de sensor — tratá-lo como tal produz dado plausível e errado, então o comando exige o mapeamento e avisa quando o parâmetro da fonte diverge do sensor.
+- **Mapeamento tag→ponto é configuração explícita, não convenção.** Node OPC-UA e registrador Modbus são ligados ao sensor por `--opcua-node "ns=2;i=101:3"` e `--modbus-register "0:3:0.01"`. Índice posicional não é chave primária de sensor — tratá-lo como tal produz dado plausível e errado, então o comando exige o mapeamento em vez de adivinhar.
+- **Fator de escala como cidadão de primeira classe.** Holding register é uint16: um pH de 7.40 não cabe nele. O CLP publica `740` e o mapeamento diz como voltar à grandeza física. Sem isso a leitura entra como pH 740 — fora de faixa, e errada de um jeito que só aparece no gráfico.
 - **Simulador determinístico por seed.** Reproduzir uma sequência de falha é `--seed 42`, não "esperar o sensor falhar de novo" — o que torna o teste das regras de qualidade repetível.
 - **Observabilidade opcional em runtime.** OpenTelemetry é ligado por `OTEL_ENABLED`; desligado, o custo é zero e nenhuma dependência de trace entra no caminho da request.
 - **Qualidade de processo separada da persistência.** `evaluate_reading()` é pura (sem I/O), o que permite avaliar o lote inteiro em memória antes de um único INSERT.
@@ -145,7 +146,11 @@ python labtelemetry/manage.py ingest_telemetry --source simulator --once --sim-c
 python labtelemetry/manage.py ingest_telemetry --source simulator --interval 5
 
 # Fonte industrial real — Modbus TCP
-python labtelemetry/manage.py ingest_telemetry --source modbus --modbus-host 192.168.0.10
+# registrador 0 -> sensor 1, com escala: o CLP publica 740, o pH é 7.40
+python labtelemetry/manage.py ingest_telemetry --source modbus \
+  --modbus-host 192.168.0.10 \
+  --modbus-register "0:1:0.01" \
+  --modbus-register "4:2:0.1"
 
 # Fonte industrial real — OPC-UA (cada node mapeado ao sensor que alimenta)
 python labtelemetry/manage.py ingest_telemetry --source opcua \
