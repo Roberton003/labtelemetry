@@ -30,7 +30,14 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-git commit -m "docs: publish initial wiki pages"
+# O clone da wiki nao herda a config do repo de codigo: sem isso o commit cai
+# na identidade global, que costuma ser generica.
+WIKI_AUTHOR_NAME="$(git -C "${ROOT_DIR}" config user.name)"
+WIKI_AUTHOR_EMAIL="$(git -C "${ROOT_DIR}" config user.email)"
+COMMIT_MSG="${1:-docs: sync wiki com docs/wiki-seed}"
+
+git -c "user.name=${WIKI_AUTHOR_NAME}" -c "user.email=${WIKI_AUTHOR_EMAIL}" \
+  commit -m "${COMMIT_MSG}"
 git push origin HEAD
 
 echo "Wiki published to https://github.com/Roberton003/labtelemetry/wiki"
