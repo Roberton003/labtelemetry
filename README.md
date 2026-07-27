@@ -21,7 +21,8 @@
 ## 📌 Project Highlights
 
 - **Idempotência garantida pelo banco, não pela aplicação.** A deduplicação vem de `UniqueConstraint(sensor, timestamp)` combinada com `bulk_create(ignore_conflicts=True)` — uma checagem por lote dentro do Postgres, em vez de um `SELECT` por amostra vindo do Python. O guardrail tem [teste negativo](labtelemetry/telemetry/test_ingest_telemetry.py): sem o mecanismo, o replay estoura `IntegrityError`.
-- **Fontes OT plugáveis atrás de uma única ABC.** `TelemetrySource` define `read()`/`health()`/`close()`; Modbus TCP, OPC-UA e simulador são intercambiáveis para o pipeline. Adicionar um protocolo não toca o código de ingestão.
+- **Fontes OT plugáveis atrás de uma única ABC.** `TelemetrySource` define `read()`/`health()`/`close()`; Modbus TCP, OPC-UA e simulador são intercambiáveis via `--source`. Adicionar um protocolo não toca o código de ingestão.
+- **Mapeamento tag→ponto é configuração explícita, não convenção.** Node OPC-UA e sensor são ligados por `--opcua-node "ns=2;i=101:3"`. Índice posicional de node ou registrador não é chave primária de sensor — tratá-lo como tal produz dado plausível e errado, então o comando exige o mapeamento e avisa quando o parâmetro da fonte diverge do sensor.
 - **Simulador determinístico por seed.** Reproduzir uma sequência de falha é `--seed 42`, não "esperar o sensor falhar de novo" — o que torna o teste das regras de qualidade repetível.
 - **Observabilidade opcional em runtime.** OpenTelemetry é ligado por `OTEL_ENABLED`; desligado, o custo é zero e nenhuma dependência de trace entra no caminho da request.
 - **Qualidade de processo separada da persistência.** `evaluate_reading()` é pura (sem I/O), o que permite avaliar o lote inteiro em memória antes de um único INSERT.
@@ -143,8 +144,14 @@ python labtelemetry/manage.py ingest_telemetry --source simulator --once --sim-c
 # Loop contínuo a cada 5s (Ctrl+C encerra de forma limpa)
 python labtelemetry/manage.py ingest_telemetry --source simulator --interval 5
 
-# Fonte industrial real
+# Fonte industrial real — Modbus TCP
 python labtelemetry/manage.py ingest_telemetry --source modbus --modbus-host 192.168.0.10
+
+# Fonte industrial real — OPC-UA (cada node mapeado ao sensor que alimenta)
+python labtelemetry/manage.py ingest_telemetry --source opcua \
+  --opcua-url opc.tcp://plc.local:4840 \
+  --opcua-node "ns=2;i=101:1" \
+  --opcua-node "ns=2;i=103:5"
 
 curl -s http://127.0.0.1:8000/api/summary/
 ```

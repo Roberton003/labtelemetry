@@ -54,6 +54,10 @@ flowchart LR
 - **`ModbusTCPAdapter`** — host, porta, unit id e timeout configuráveis; lê holding registers via `pymodbus`.
 - **`OpcUaAdapter`** — lê node ids de um servidor OPC-UA via `asyncua`, com servidor de teste incluído.
 
+**Mapeamento tag → ponto:** o adapter recebe `node_ids` e `sensor_ids` em paralelo, porque **índice posicional de node não é chave primária de sensor**. Sem esse mapeamento explícito, o node 0 vira "sensor 0" — que ou não existe, ou é o sensor errado, e o resultado é dado plausível e silenciosamente incorreto. O comando de ingestão exige o par via `--opcua-node "NODE_ID:SENSOR_ID"` e recusa iniciar sem ele.
+
+**Guard de coerência:** se o `parameter` que a fonte reporta (browse name, no caso do OPC-UA) diverge do parâmetro do sensor no banco, `_sample_to_reading()` emite warning sem descartar a leitura — o browse name pode legitimamente divergir, mas mapeamento trocado é a hipótese mais provável.
+
 **Por que a abstração se paga:** o comando de ingestão não tem um único `if` por protocolo no caminho de dados. Adicionar MQTT amanhã é um arquivo novo em `sources/`, não uma edição no runner.
 
 **Degradação:** se `pymodbus` não está instalado ou o CLP está fora do ar, `health()` reporta `disconnected` e `read()` devolve lista vazia. A fonte falha visível, não some.

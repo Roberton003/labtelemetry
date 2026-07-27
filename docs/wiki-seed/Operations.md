@@ -52,6 +52,17 @@ export DATABASE_URL="postgres://labtelemetry:labtelemetry_dev@localhost:5432/lab
   --modbus-host 192.168.0.10 --modbus-port 502 --modbus-unit 1
 ```
 
+**OPC-UA (fonte real):**
+
+```bash
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source opcua \
+  --opcua-url opc.tcp://plc.local:4840 \
+  --opcua-node "ns=2;i=101:1" \
+  --opcua-node "ns=2;i=103:5"
+```
+
+**Formato do `--opcua-node`:** `NODE_ID:SENSOR_ID`, repetível, um por node. O split acontece no **último** `:` — node ids contêm `=` e `;` (`ns=2;i=101`), então isso não colide. Sem ao menos um mapeamento, o comando recusa iniciar: índice posicional de node não é chave primária de sensor.
+
 **Cenário sintético com anomalias:**
 
 ```bash

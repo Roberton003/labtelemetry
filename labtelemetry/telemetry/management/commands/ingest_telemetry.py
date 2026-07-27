@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--source", default="simulator", choices=["modbus", "simulator"]
+            "--source", default="simulator", choices=["modbus", "opcua", "simulator"]
         )
         parser.add_argument(
             "--interval", type=float, default=5.0, help="Seconds between reads"
@@ -36,6 +36,20 @@ class Command(BaseCommand):
         parser.add_argument("--modbus-port", type=int, default=502)
         parser.add_argument("--modbus-unit", type=int, default=1)
         parser.add_argument("--modbus-timeout", type=float, default=5.0)
+
+        # OPC-UA args
+        parser.add_argument("--opcua-url", default="opc.tcp://localhost:4840")
+        parser.add_argument("--opcua-timeout", type=float, default=5.0)
+        parser.add_argument(
+            "--opcua-node",
+            action="append",
+            default=None,
+            metavar="NODE_ID:SENSOR_ID",
+            help=(
+                "Node OPC-UA e o sensor que ele alimenta, ex.: "
+                "'ns=2;i=101:3'. Repetivel, um por node."
+            ),
+        )
 
         # Simulator args
         parser.add_argument("--sim-seed", type=int, default=42)
@@ -131,6 +145,39 @@ class Command(BaseCommand):
                 )
             return adapter
 
+        if source_type == "opcua":
+            from telemetry.sources.opcua import OpcUaAdapter
+
+            specs = options["opcua_node"]
+            if not specs:
+                self.stderr.write(
+                    "--source opcua exige ao menos um --opcua-node "
+                    "'NODE_ID:SENSOR_ID' (ex.: 'ns=2;i=101:3')"
+                )
+                return None
+
+            node_ids: list[str] = []
+            sensor_ids: list[int] = []
+            for spec in specs:
+                # rsplit: node ids contem '=' e ';' (ns=2;i=101), mas o
+                # sensor id fica sempre depois do ultimo ':'.
+                node_id, _, raw_sensor_id = spec.rpartition(":")
+                if not node_id or not raw_sensor_id.strip().isdigit():
+                    self.stderr.write(
+                        f"--opcua-node invalido: {spec!r}. "
+                        "Formato esperado: 'NODE_ID:SENSOR_ID'."
+                    )
+                    return None
+                node_ids.append(node_id)
+                sensor_ids.append(int(raw_sensor_id))
+
+            return OpcUaAdapter(
+                url=options["opcua_url"],
+                node_ids=node_ids,
+                sensor_ids=sensor_ids,
+                timeout=options["opcua_timeout"],
+            )
+
         if source_type == "simulator":
             from telemetry.sources.simulator import SimulatorAdapter
 
@@ -148,6 +195,17 @@ class Command(BaseCommand):
         except TelemetrySensor.DoesNotExist:
             logger.warning("Sensor %d not found, skipping", sample.sensor_id)
             return None
+
+        # Mapeamento errado (node/registrador apontando para o sensor errado)
+        # produz dado plausivel e silenciosamente incorreto. Avisa sem
+        # descartar: o browse name da fonte pode legitimamente divergir.
+        if sample.parameter and sample.parameter != sensor.parameter:
+            logger.warning(
+                "Sensor %d e %s, mas a fonte enviou %s — verifique o mapeamento",
+                sensor.id,
+                sensor.parameter,
+                sample.parameter,
+            )
 
         timestamp = sample.timestamp or datetime.now(UTC)
 

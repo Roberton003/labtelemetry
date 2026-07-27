@@ -19,11 +19,26 @@ class OpcUaAdapter(TelemetrySource):
         url: str = "opc.tcp://localhost:4840",
         node_ids: list[str] | None = None,
         timeout: float = 5.0,
+        sensor_ids: list[int] | None = None,
     ):
+        """Adapter OPC-UA.
+
+        `sensor_ids` mapeia cada node ao TelemetrySensor correspondente, na
+        mesma ordem de `node_ids`. Sem ele, o adapter cai no indice posicional
+        — util para inspecao, mas nao para ingestao: o indice nao e chave
+        primaria de sensor.
+        """
         self._url = url
         self._node_ids = node_ids or []
         self._timeout = timeout
         self._last_read: datetime | None = None
+
+        if sensor_ids is not None and len(sensor_ids) != len(self._node_ids):
+            raise ValueError(
+                f"sensor_ids tem {len(sensor_ids)} entradas para "
+                f"{len(self._node_ids)} node_ids; devem casar 1:1"
+            )
+        self._sensor_ids = sensor_ids
 
     @property
     def name(self) -> str:
@@ -51,7 +66,11 @@ class OpcUaAdapter(TelemetrySource):
 
                     samples.append(
                         TelemetrySample(
-                            sensor_id=idx,
+                            sensor_id=(
+                                self._sensor_ids[idx]
+                                if self._sensor_ids is not None
+                                else idx
+                            ),
                             parameter=browse_name,
                             value=round(float(value), 4),
                             timestamp=now,

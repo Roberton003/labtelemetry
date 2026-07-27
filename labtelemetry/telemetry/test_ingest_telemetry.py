@@ -196,14 +196,143 @@ class IngestTelemetryCommandTest(TestCase):
         self.assertIn("Source health: connected", out.getvalue())
 
 
+class IngestOpcUaSourceTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.sensor_ph = TelemetrySensor.objects.create(
+            id=11, name="pH Reator", parameter="PH"
+        )
+        cls.sensor_toc = TelemetrySensor.objects.create(
+            id=12, name="TOC Saida", parameter="TOC"
+        )
+
+    def _build(self, argv):
+        """Roda _build_source com argv e devolve o adapter (ou None)."""
+        from telemetry.management.commands.ingest_telemetry import Command
+
+        cmd = Command()
+        parser = cmd.create_parser("manage.py", "ingest_telemetry")
+        options = vars(parser.parse_args(argv))
+        cmd.stderr = StringIO()
+        return cmd._build_source(options), cmd.stderr.getvalue()
+
+    def test_node_spec_maps_each_node_to_its_sensor(self):
+        adapter, _ = self._build([
+            "--source", "opcua",
+            "--opcua-url", "opc.tcp://plc.local:4840",
+            "--opcua-node", "ns=2;i=101:11",
+            "--opcua-node", "ns=2;i=103:12",
+        ])
+
+        self.assertIsNotNone(adapter)
+        # Node ids carregam '=' e ';' — o split e no ultimo ':', nao no primeiro.
+        self.assertEqual(adapter._node_ids, ["ns=2;i=101", "ns=2;i=103"])
+        self.assertEqual(adapter._sensor_ids, [11, 12])
+        self.assertEqual(adapter.name, "opcua:opc.tcp://plc.local:4840")
+
+    def test_missing_node_mapping_is_rejected(self):
+        adapter, err = self._build(["--source", "opcua"])
+        self.assertIsNone(adapter)
+        self.assertIn("--opcua-node", err)
+
+    def test_malformed_node_spec_is_rejected(self):
+        adapter, err = self._build([
+            "--source", "opcua", "--opcua-node", "ns=2;i=101",
+        ])
+        self.assertIsNone(adapter)
+        self.assertIn("invalido", err)
+
+    def test_sensor_ids_must_match_node_count(self):
+        from telemetry.sources.opcua import OpcUaAdapter
+
+        with self.assertRaises(ValueError):
+            OpcUaAdapter(node_ids=["ns=2;i=101", "ns=2;i=102"], sensor_ids=[11])
+
+    def test_parameter_mismatch_warns_but_still_ingests(self):
+        """Node apontado para o sensor errado avisa, sem descartar o dado."""
+        source = _StubSource(
+            "stub:opcua",
+            [
+                TelemetrySample(
+                    sensor_id=self.sensor_ph.id,   # sensor e PH
+                    parameter="TOC",               # mas a fonte diz TOC
+                    value=7.0,
+                    timestamp=datetime(2026, 6, 23, 12, 0, tzinfo=UTC),
+                    source="stub:opcua",
+                ),
+            ],
+        )
+
+        with mock.patch(
+            "telemetry.management.commands.ingest_telemetry.Command._build_source",
+            return_value=source,
+        ):
+            with self.assertLogs(
+                "telemetry.management.commands.ingest_telemetry", level="WARNING"
+            ) as logs:
+                call_command("ingest_telemetry", "--once", stdout=StringIO())
+
+        self.assertTrue(
+            any("verifique o mapeamento" in m for m in logs.output),
+            f"esperava aviso de mapeamento, obtive: {logs.output}",
+        )
+        self.assertEqual(TelemetryReading.objects.count(), 1)
+
+    def test_end_to_end_against_live_opcua_server_persists_readings(self):
+        """Integracao: servidor OPC-UA real -> comando -> leituras no banco."""
+        import time
+
+        from telemetry.sources.opcua_test_server import (
+            DEFAULT_PORT,
+            PH_NODE_ID,
+            TOC_NODE_ID,
+            run_test_server,
+        )
+
+        port = DEFAULT_PORT + 1
+        thread = run_test_server(port)
+        try:
+            out = StringIO()
+            # O servidor pode demorar a ficar pronto; o comando so persiste
+            # quando ha amostras, entao tentamos ate 3x.
+            for _ in range(3):
+                call_command(
+                    "ingest_telemetry",
+                    "--source", "opcua",
+                    "--once",
+                    "--opcua-url", f"opc.tcp://127.0.0.1:{port}",
+                    "--opcua-timeout", "5",
+                    "--opcua-node", f"{PH_NODE_ID}:{self.sensor_ph.id}",
+                    "--opcua-node", f"{TOC_NODE_ID}:{self.sensor_toc.id}",
+                    stdout=out,
+                )
+                if TelemetryReading.objects.exists():
+                    break
+                time.sleep(1)
+
+            readings = {r.sensor_id: r for r in TelemetryReading.objects.all()}
+            self.assertEqual(set(readings), {self.sensor_ph.id, self.sensor_toc.id})
+            # Valores do servidor de teste: PH=7.0, TOC=5.0
+            self.assertAlmostEqual(readings[self.sensor_ph.id].raw_value, 7.0, delta=0.1)
+            self.assertAlmostEqual(readings[self.sensor_toc.id].raw_value, 5.0, delta=0.1)
+            self.assertIn("opcua:", readings[self.sensor_ph.id].source)
+            # PH=7.0 esta dentro de 6.0-8.5 e TOC=5.0 abaixo de 10.0
+            self.assertEqual(readings[self.sensor_ph.id].status, "NORMAL")
+            self.assertEqual(readings[self.sensor_toc.id].status, "NORMAL")
+        finally:
+            thread.join(timeout=2)
+
+
 class SourceHealthEndpointTest(TestCase):
-    def test_returns_status_for_simulator_and_modbus(self):
+    def test_returns_status_for_all_three_sources(self):
         resp = self.client.get("/api/health/sources/")
         self.assertEqual(resp.status_code, 200)
 
         data = resp.json()
         self.assertIn("simulator", data)
         self.assertIn("modbus", data)
+        self.assertIn("opcua", data)
         self.assertEqual(data["simulator"]["name"], "simulator:seed=42")
         self.assertEqual(data["simulator"]["status"], "ok")
         self.assertIn(data["modbus"]["status"], {"disconnected", "unavailable"})
+        self.assertIn(data["opcua"]["status"], {"unknown", "unavailable"})

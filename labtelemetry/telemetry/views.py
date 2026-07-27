@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from telemetry.models import TelemetryAlert, TelemetryReading, TelemetrySensor
-from telemetry.sources import ModbusTCPAdapter, SimulatorAdapter
+from telemetry.sources import ModbusTCPAdapter, OpcUaAdapter, SimulatorAdapter
 
 # tracer para spans manuais (ex.: summary)
 try:
@@ -32,6 +32,16 @@ def _source_health_payload() -> dict:
         }
     else:
         sources["modbus"] = ModbusTCPAdapter().health()
+
+    if OpcUaAdapter is None:
+        sources["opcua"] = {
+            "name": "opcua",
+            "status": "unavailable",
+            "last_read": None,
+            "reason": "asyncua not installed",
+        }
+    else:
+        sources["opcua"] = OpcUaAdapter().health()
 
     return sources
 
