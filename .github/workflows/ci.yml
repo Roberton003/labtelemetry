@@ -80,3 +80,98 @@ jobs:
         working-directory: ./labtelemetry
         env:
           DEBUG: "False"
+
+  # O job `test` roda contra um Postgres avulso e nunca sobe o compose, entao
+  # nada nele cobre Docker, entrypoint, migrate no boot ou o caminho de
+  # observabilidade. Este job exercita o stack como um usuario o executa.
+  e2e:
+    name: e2e (compose + traces)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Portas alternativas: o runner tem servicos proprios e, de quebra,
+      # isto exercita as variaveis de override do compose.
+      POSTGRES_PORT: "55432"
+      OTLP_GRPC_PORT: "54317"
+      OTLP_HTTP_PORT: "54318"
+      JAEGER_UI_PORT: "56686"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Start stack
+        run: docker compose up -d --build
+
+      - name: Wait for dashboard
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/ || true)
+            if [ "$code" = "200" ]; then
+              echo "dashboard respondeu 200 apos ~$((i * 2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::dashboard nunca respondeu 200"
+          exit 1
+
+      - name: Ingest telemetry through the container
+        run: |
+          docker compose exec -T app \
+            python manage.py ingest_telemetry --source simulator --once --sim-count 3
+
+      - name: API returns persisted data
+        run: |
+          curl -sS http://127.0.0.1:8000/api/summary/ | tee /tmp/summary.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("/tmp/summary.json"))
+          assert d["total_sensors"] > 0, d
+          assert d["total_readings"] > 0, d
+          print("summary ok:", d)
+          PY
+
+      - name: Generate traced requests
+        run: |
+          for _ in $(seq 1 5); do
+            curl -sS -o /dev/null http://127.0.0.1:8000/api/summary/
+          done
+
+      # O ponto do job: prova que a cadeia OTel -> OTLP -> Jaeger esta viva.
+      # Sem isto, uma quebra no exporter ou no receptor passa despercebida.
+      #
+      # Exige um span HTTP de servidor (`GET ...`), nao um trace qualquer: os
+      # spans do psycopg costumam ser exportados primeiro, e aceitar so eles
+      # deixaria passar uma quebra na instrumentacao do Django. O loop tolera
+      # a latencia do BatchSpanProcessor em vez de encurtar a assercao.
+      - name: Traces reach Jaeger
+        run: |
+          for i in $(seq 1 45); do
+            if curl -s http://127.0.0.1:56686/api/services | grep -q labtelemetry; then
+              curl -s "http://127.0.0.1:56686/api/traces?service=labtelemetry&limit=20" \
+                > /tmp/traces.json
+              if python3 -c "
+          import json, sys
+          data = json.load(open('/tmp/traces.json')).get('data') or []
+          ops = sorted({s['operationName'] for t in data for s in t['spans']})
+          http = [o for o in ops if o.startswith('GET ')]
+          print(f'{len(data)} traces, operacoes: {ops}')
+          sys.exit(0 if data and http else 1)
+          "; then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          echo "::error::nao chegou nenhum span HTTP do servico labtelemetry ao Jaeger"
+          exit 1
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=100
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
