@@ -35,7 +35,12 @@ queries retain basic lineage without preserving raw protocol payloads.
 The current adapters are:
 
 - `SimulatorAdapter`: uses the existing simulator path for reproducible local runs.
-- `ModbusTCPAdapter`: provides a Modbus TCP adapter surface with configurable host, port, unit id, and timeout.
-- `OpcUaAdapter`: connects to OPC-UA servers to read telemetry node variables.
+- `ModbusTCPAdapter`: configurable host, port, unit id, and timeout. Each
+  holding register is mapped to the sensor it feeds, with its own scale
+  factor — a uint16 register cannot hold a pH of 7.40, so the PLC publishes
+  740 and the mapping converts it back.
+- `OpcUaAdapter`: reads node variables from an OPC-UA server. Each node is
+  mapped to the sensor it feeds; positional node index is not a sensor
+  primary key, so the mapping is required rather than inferred.
 
 The simulator remains the default reproducible path. Real Modbus and OPC-UA validation depend on an available device or simulator.

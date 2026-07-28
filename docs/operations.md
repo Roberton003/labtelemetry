@@ -40,6 +40,20 @@ Open:
 .venv/bin/python labtelemetry/manage.py ingest_telemetry --source simulator --once
 ```
 
+Field sources require an explicit tag-to-point mapping — a positional register
+or node index is not a sensor primary key, so the command refuses to start
+without it:
+
+```bash
+# Modbus: register 0 feeds sensor 1; the PLC publishes 740, the pH is 7.40
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source modbus \
+  --modbus-host 192.168.0.10 --modbus-register "0:1:0.01"
+
+# OPC-UA: node ns=2;i=101 feeds sensor 1
+.venv/bin/python labtelemetry/manage.py ingest_telemetry --source opcua \
+  --opcua-url opc.tcp://plc.local:4840 --opcua-node "ns=2;i=101:1"
+```
+
 ## What The UI Shows
 
 - summary cards

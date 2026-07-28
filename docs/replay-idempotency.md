@@ -83,8 +83,8 @@ idempotente de verdade:
 
 ```bash
 # Executar duas vezes sobre a mesma janela da fonte
-python manage.py ingest_telemetry --source modbus --once
-python manage.py ingest_telemetry --source modbus --once
+python manage.py ingest_telemetry --source modbus --once --modbus-register "0:1:0.01"
+python manage.py ingest_telemetry --source modbus --once --modbus-register "0:1:0.01"
 # As leituras cujo (sensor, timestamp) ja existe sao descartadas pelo banco
 ```
 

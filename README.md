@@ -177,6 +177,16 @@ coverage report
 
 Os testes marcados `@tag("integration")` sobem um servidor OPC-UA real. Rodam no gate de correção, mas ficam fora da medição de cobertura: sob o tracer do `coverage`, o startup do servidor passa de ~2s para ~56s.
 
+### O que o CI verifica
+
+| Job | Cobre |
+|---|---|
+| `lint` | `ruff`, em versão fixa |
+| `test` | 85 testes contra PostgreSQL, migrations em sincronia com os models, gate de cobertura |
+| `e2e` | Sobe o `docker compose` de verdade: Dockerfile, entrypoint, `migrate` no boot, API com dados e **traces chegando ao Jaeger** |
+
+O job `e2e` existe porque os outros dois nunca sobem o compose — uma quebra no Dockerfile ou na cadeia de observabilidade passaria despercebida.
+
 Roteiro completo em [docs/manual_validacao_ponta_a_ponta.md](docs/manual_validacao_ponta_a_ponta.md).
 
 ---
@@ -240,7 +250,7 @@ labtelemetry/
 │       └── test_*.py, tests.py       # 85 testes
 ├── docs/                       # Documentação pública + wiki-seed
 ├── sql/analytics/              # Consultas operacionais
-├── .github/workflows/ci.yml    # ruff + testes com Postgres 16
+├── .github/workflows/ci.yml    # lint + testes/cobertura + e2e no compose
 ├── docker-compose.yml          # app + postgres + jaeger
 └── Dockerfile                  # Runtime Gunicorn
 ```

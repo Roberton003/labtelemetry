@@ -9,13 +9,13 @@ The project is intentionally small and reproducible. It demonstrates the path fr
 | Area | Current State |
 |---|---|
 | Domain | Industrial telemetry lab for pH, turbidity, and TOC |
-| Ingestion | Deterministic simulator plus Modbus TCP adapter surface |
+| Ingestion | Deterministic simulator plus Modbus TCP and OPC-UA adapters |
 | Storage | PostgreSQL 16 via Docker Compose, SQLite fallback for local-only runs |
 | Backend | Django 5.2.9 |
 | Frontend | Server-rendered dashboard with HTMX and Chart.js |
-| Observability | OpenTelemetry with Jaeger, optional at runtime |
+| Observability | OpenTelemetry with Jaeger 2, optional at runtime |
 | Data Quality | Threshold rules, drift warning, active alerts |
-| Validation | Django tests, API checks, end-to-end local manual |
+| Validation | 85 Django tests, 85% coverage gate, compose end-to-end job in CI |
 
 ## What It Shows
 
@@ -23,7 +23,7 @@ The project is intentionally small and reproducible. It demonstrates the path fr
 - persistent telemetry readings with source lineage
 - JSON endpoints under `/api/...`
 - a server-rendered dashboard with dynamic HTMX updates
-- source health checks for simulator and Modbus
+- source health checks for simulator, Modbus, and OPC-UA
 - optional traces in Jaeger
 
 ## Why It Exists
