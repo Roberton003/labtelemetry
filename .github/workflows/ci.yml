@@ -141,25 +141,31 @@ jobs:
 
       # O ponto do job: prova que a cadeia OTel -> OTLP -> Jaeger esta viva.
       # Sem isto, uma quebra no exporter ou no receptor passa despercebida.
+      #
+      # Exige um span HTTP de servidor (`GET ...`), nao um trace qualquer: os
+      # spans do psycopg costumam ser exportados primeiro, e aceitar so eles
+      # deixaria passar uma quebra na instrumentacao do Django. O loop tolera
+      # a latencia do BatchSpanProcessor em vez de encurtar a assercao.
       - name: Traces reach Jaeger
         run: |
           for i in $(seq 1 45); do
             if curl -s http://127.0.0.1:56686/api/services | grep -q labtelemetry; then
-              curl -s "http://127.0.0.1:56686/api/traces?service=labtelemetry&limit=5" \
+              curl -s "http://127.0.0.1:56686/api/traces?service=labtelemetry&limit=20" \
                 > /tmp/traces.json
               if python3 -c "
           import json, sys
           data = json.load(open('/tmp/traces.json')).get('data') or []
-          ops = {s['operationName'] for t in data for s in t['spans']}
-          print(f'{len(data)} traces, operacoes: {sorted(ops)}')
-          sys.exit(0 if data else 1)
+          ops = sorted({s['operationName'] for t in data for s in t['spans']})
+          http = [o for o in ops if o.startswith('GET ')]
+          print(f'{len(data)} traces, operacoes: {ops}')
+          sys.exit(0 if data and http else 1)
           "; then
                 exit 0
               fi
             fi
             sleep 2
           done
-          echo "::error::nenhum trace do servico labtelemetry chegou ao Jaeger"
+          echo "::error::nao chegou nenhum span HTTP do servico labtelemetry ao Jaeger"
           exit 1
 
       - name: Dump logs on failure
