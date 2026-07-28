@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   jaeger:
     # Mesma versao fixada em docker-compose.yml — manter os dois em sincronia.
-    image: jaegertracing/all-in-one:1.76.0
+    # Em v2 os receptores OTLP ja vem ligados; `COLLECTOR_OTLP_ENABLED` era
+    # exigencia do v1 e foi removida.
+    image: jaegertracing/jaeger:2.20.0
     container_name: local_observability_jaeger
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
     ports:
       # Jaeger UI (Interface Web para visualizar os traces)
       - "16686:16686"
@@ -14,6 +12,6 @@ services:
       - "4317:4317"
       # OpenTelemetry HTTP Receiver
       - "4318:4318"
-      # Jaeger Compact Thrift Receiver (legacy)
+      # Jaeger Compact Thrift Receiver (legado; ainda ativo por padrao no v2)
       - "6831:6831/udp"
     restart: unless-stopped

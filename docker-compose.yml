@@ -34,14 +34,16 @@ services:
     restart: unless-stopped
 
   jaeger:
-    # Versao fixa pelo mesmo motivo das dependencias Python: `:latest` fazia
-    # cada clone puxar um Jaeger diferente do que foi validado aqui.
-    # v1 esta em fim de vida — migrar para `jaegertracing/jaeger:2.x` e
-    # evolucao pendente, nao substituicao automatica.
-    image: jaegertracing/all-in-one:1.76.0
+    # Jaeger v2 (construido sobre o OpenTelemetry Collector). Substitui o
+    # `all-in-one` do v1, que esta em fim de vida. Versao fixa pelo mesmo
+    # motivo das dependencias Python.
+    #
+    # Sem `COLLECTOR_OTLP_ENABLED`: em v2 os receptores OTLP (4317/4318) vem
+    # ligados por padrao; a variavel era exigencia do v1 e aqui nao tem efeito.
+    # A API de query segue em 16686 com as mesmas rotas (/api/services,
+    # /api/traces), entao nada muda para quem consome.
+    image: jaegertracing/jaeger:2.20.0
     container_name: labtelemetry_jaeger
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
     ports:
       # Sobrescreva se ja houver um collector OTLP local ocupando 4317/4318.
       - "${JAEGER_UI_PORT:-16686}:16686"

@@ -56,7 +56,7 @@ fonte OT → ingestão → regras de qualidade → PostgreSQL → API JSON → d
 | Interface | Dashboard server-rendered com HTMX e Chart.js |
 | Fontes de telemetria | Simulador determinístico, Modbus TCP, OPC-UA |
 | Idempotência | `UniqueConstraint(sensor, timestamp)` + `bulk_create(ignore_conflicts=True)` |
-| Observabilidade | OpenTelemetry com Jaeger, opt-in via `OTEL_ENABLED` |
+| Observabilidade | OpenTelemetry com Jaeger 2, opt-in via `OTEL_ENABLED` |
 | Validação | 85 testes automatizados, cobertura 89% + manual end-to-end |
 
 <p align="center">

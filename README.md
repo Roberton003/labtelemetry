@@ -42,7 +42,7 @@
 | Backend | Django 5.2 / Python 3.12 |
 | API | Endpoints JSON server-side, sem framework REST adicional |
 | Frontend | Django Templates + HTMX + Chart.js |
-| Observabilidade | OpenTelemetry → Jaeger (opt-in via `OTEL_ENABLED`) |
+| Observabilidade | OpenTelemetry → Jaeger 2 (opt-in via `OTEL_ENABLED`) |
 | Runtime | Docker + Gunicorn |
 | Qualidade de código | ruff, 85 testes Django, gate de cobertura em 85%, CI no GitHub Actions |
 | Reprodutibilidade | Dependências fixadas exatamente, diretas e transitivas |
