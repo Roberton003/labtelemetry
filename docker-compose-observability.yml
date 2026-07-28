@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    # Mesma versao fixada em docker-compose.yml — manter os dois em sincronia.
+    image: jaegertracing/all-in-one:1.76.0
     container_name: local_observability_jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true

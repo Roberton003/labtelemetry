@@ -31,7 +31,11 @@ services:
     restart: unless-stopped
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    # Versao fixa pelo mesmo motivo das dependencias Python: `:latest` fazia
+    # cada clone puxar um Jaeger diferente do que foi validado aqui.
+    # v1 esta em fim de vida — migrar para `jaegertracing/jaeger:2.x` e
+    # evolucao pendente, nao substituicao automatica.
+    image: jaegertracing/all-in-one:1.76.0
     container_name: labtelemetry_jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
