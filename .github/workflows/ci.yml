@@ -25,7 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        # Mesma versao do docker-compose.yml (la na variante alpine).
+        image: postgres:16.14
         env:
           POSTGRES_DB: labtelemetry
           POSTGRES_USER: labtelemetry

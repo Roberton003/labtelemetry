@@ -16,7 +16,10 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    # Patch fixado: `16-alpine` flutua dentro do 16.x, entao dois clones em
+    # semanas diferentes rodam builds diferentes. Manter em sincronia com a
+    # versao usada no servico postgres do CI (.github/workflows/ci.yml).
+    image: postgres:16.14-alpine
     container_name: labtelemetry_postgres
     environment:
       POSTGRES_DB: labtelemetry
